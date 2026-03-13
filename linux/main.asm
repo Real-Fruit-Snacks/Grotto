@@ -168,7 +168,11 @@ cleanup_and_exit:
     xor edi, edi
     syscall
 
-%include "net.asm"
+%include "aead.inc"    ; shared crypto (includes chacha20.inc and poly1305.inc)
+%include "net.asm"     ; networking
+%include "crypto.asm"  ; nonce generation, wire protocol wrappers
+%include "io.asm"      ; relay loop
+%include "shell.asm"   ; shell execution
 
 ; ============================================================================
 ; _start - entry point, parse CLI arguments
@@ -341,9 +345,28 @@ _start:
     mov [rel g_sockfd], rax
 
 .connected:
-    ; Socket fd now in g_sockfd
-    ; TODO: relay loop (Tasks 7-9)
-    jmp cleanup_and_exit
+    ; Check if -e flag was given
+    cmp qword [rel g_exec], 0
+    jne .spawn_shell
+
+    ; No -e: relay between socket and stdin/stdout
+    mov edi, [rel g_sockfd]
+    mov esi, 0              ; local_read_fd = stdin
+    mov edx, 1              ; local_write_fd = stdout
+    call relay_loop
+    ; relay_loop never returns
+
+.spawn_shell:
+    mov rdi, [rel g_exec]
+    call spawn_shell
+    cmp eax, -1
+    je .exit_error
+    ; eax = read_fd (child stdout), edx = write_fd (child stdin)
+    mov esi, eax            ; local_read_fd = child stdout pipe
+    ; edx already = local_write_fd = child stdin pipe
+    mov edi, [rel g_sockfd]
+    call relay_loop
+    ; relay_loop never returns
 
 .exit_error:
     mov eax, 60
