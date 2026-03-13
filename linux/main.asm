@@ -168,6 +168,8 @@ cleanup_and_exit:
     xor edi, edi
     syscall
 
+%include "net.asm"
+
 ; ============================================================================
 ; _start - entry point, parse CLI arguments
 ; ============================================================================
@@ -318,10 +320,30 @@ _start:
     jmp .exit_error
 
 .parsed_ok:
-    ; TODO: networking and relay (Tasks 6-9)
-    mov eax, 60
-    xor edi, edi
-    syscall
+    ; Networking
+    cmp byte [rel g_mode], 1
+    je .listen_mode
+
+.connect_mode:
+    mov edi, [rel g_host]
+    mov si, [rel g_port]
+    call net_connect
+    test rax, rax
+    js .exit_error
+    mov [rel g_sockfd], rax
+    jmp .connected
+
+.listen_mode:
+    movzx edi, word [rel g_port]
+    call net_listen
+    test rax, rax
+    js .exit_error
+    mov [rel g_sockfd], rax
+
+.connected:
+    ; Socket fd now in g_sockfd
+    ; TODO: relay loop (Tasks 7-9)
+    jmp cleanup_and_exit
 
 .exit_error:
     mov eax, 60
