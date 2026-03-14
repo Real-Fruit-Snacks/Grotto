@@ -1,6 +1,7 @@
 build/
 *.o
 *.obj
+baked.inc
 .omc/
 docs/superpowers/
 tests/remote_*.py

