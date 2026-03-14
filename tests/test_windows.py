@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Integration tests for Windows ncat.exe encrypted relay and shell execution.
+"""Integration tests for Windows grotto.exe encrypted relay and shell execution.
 
 Run ON a Windows machine with Python 3.8+ and the 'cryptography' package installed:
     pip install cryptography
@@ -16,15 +16,15 @@ import time
 
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 
-# Locate ncat.exe: check build/ directory relative to this script, then current dir
+# Locate grotto.exe: check build/ directory relative to this script, then current dir
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _BUILD_DIR = os.path.join(_SCRIPT_DIR, "..", "build")
-if os.path.isfile(os.path.join(_BUILD_DIR, "ncat.exe")):
-    NCAT_BIN = os.path.join(_BUILD_DIR, "ncat.exe")
-elif os.path.isfile("ncat.exe"):
-    NCAT_BIN = os.path.abspath("ncat.exe")
+if os.path.isfile(os.path.join(_BUILD_DIR, "grotto.exe")):
+    GROTTO_BIN = os.path.join(_BUILD_DIR, "grotto.exe")
+elif os.path.isfile("grotto.exe"):
+    GROTTO_BIN = os.path.abspath("grotto.exe")
 else:
-    NCAT_BIN = os.path.join(_BUILD_DIR, "ncat.exe")  # fallback, let it fail later
+    GROTTO_BIN = os.path.join(_BUILD_DIR, "grotto.exe")  # fallback, let it fail later
 
 
 def make_key():
@@ -81,7 +81,7 @@ def recv_encrypted(sock, key):
 # Test 1: Encrypted relay (no -e) — use -e with a command that echoes back
 # ---------------------------------------------------------------------------
 def test_encrypted_relay():
-    """Start ncat.exe listener with -e cmd.exe /c 'findstr .*' (echo),
+    """Start grotto.exe listener with -e cmd.exe /c 'findstr .*' (echo),
     connect via Python, exchange encrypted messages."""
     print("Test 1: Encrypted relay (echo via findstr)...", end=" ", flush=True)
 
@@ -92,7 +92,7 @@ def test_encrypted_relay():
     # Use 'cmd.exe /c more' as a simple echo-back: it reads stdin and writes to stdout.
     # However, the most reliable Windows echo-back is 'findstr ".*"' which echoes every line.
     proc = subprocess.Popen(
-        [NCAT_BIN, "-l", "-p", str(port), "-k", key_hex,
+        [GROTTO_BIN, "-l", "-p", str(port), "-k", key_hex,
          "-e", "cmd.exe /c findstr .*"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
@@ -134,7 +134,7 @@ def test_encrypted_relay():
 # Test 2: Shell execution via -e cmd.exe
 # ---------------------------------------------------------------------------
 def test_shell_execution():
-    """Start ncat.exe with -e cmd.exe, send encrypted 'echo hello_test',
+    """Start grotto.exe with -e cmd.exe, send encrypted 'echo hello_test',
     verify the encrypted response contains expected output."""
     print("Test 2: Encrypted shell execution (-e cmd.exe)...", end=" ", flush=True)
 
@@ -143,7 +143,7 @@ def test_shell_execution():
     port = 15552
 
     proc = subprocess.Popen(
-        [NCAT_BIN, "-l", "-p", str(port), "-k", key_hex, "-e", "cmd.exe"],
+        [GROTTO_BIN, "-l", "-p", str(port), "-k", key_hex, "-e", "cmd.exe"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
         creationflags=subprocess.CREATE_NO_WINDOW,
@@ -193,12 +193,12 @@ def test_shell_execution():
 
 
 # ---------------------------------------------------------------------------
-# Test 3: Connect mode — Python listens, ncat.exe connects
+# Test 3: Connect mode — Python listens, grotto.exe connects
 # ---------------------------------------------------------------------------
 def test_connect_mode():
-    """Python opens a listener, ncat.exe connects to it, verify encrypted
+    """Python opens a listener, grotto.exe connects to it, verify encrypted
     bidirectional communication works."""
-    print("Test 3: Connect mode (ncat connects to Python)...", end=" ", flush=True)
+    print("Test 3: Connect mode (grotto connects to Python)...", end=" ", flush=True)
 
     key = make_key()
     key_hex = key_to_hex(key)
@@ -211,9 +211,9 @@ def test_connect_mode():
     server.listen(1)
     server.settimeout(10)
 
-    # Start ncat.exe in connect mode with -e to echo back
+    # Start grotto.exe in connect mode with -e to echo back
     proc = subprocess.Popen(
-        [NCAT_BIN, "127.0.0.1", str(port), "-k", key_hex,
+        [GROTTO_BIN, "127.0.0.1", str(port), "-k", key_hex,
          "-e", "cmd.exe /c findstr .*"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
@@ -221,11 +221,11 @@ def test_connect_mode():
     )
 
     try:
-        # Accept ncat connection
+        # Accept grotto connection
         conn, addr = server.accept()
         conn.settimeout(10)
 
-        # Send encrypted data to ncat
+        # Send encrypted data to grotto
         test_data = b"connect_mode_test\n"
         send_encrypted(conn, key, test_data)
 
@@ -254,9 +254,9 @@ def test_connect_mode():
 # Main
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    print(f"Using binary: {NCAT_BIN}")
-    if not os.path.isfile(NCAT_BIN):
-        print(f"ERROR: Binary not found at {NCAT_BIN}")
+    print(f"Using binary: {GROTTO_BIN}")
+    if not os.path.isfile(GROTTO_BIN):
+        print(f"ERROR: Binary not found at {GROTTO_BIN}")
         sys.exit(1)
 
     passed = 0

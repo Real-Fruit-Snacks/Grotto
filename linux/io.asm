@@ -67,15 +67,25 @@ relay_loop:
     test eax, eax
     js .relay_exit              ; poll error
 
-    ; --- Check socket for POLLERR|POLLHUP ---
+    ; --- Check socket for POLLERR, or POLLHUP without POLLIN ---
     movzx eax, word [rsp + STK_POLLFDS + 6]
-    test ax, POLLERR | POLLHUP
+    test ax, POLLERR
     jnz .relay_exit
+    test ax, POLLHUP
+    jz .sock_ok
+    test ax, POLLIN
+    jz .relay_exit              ; HUP with no data = done
+.sock_ok:
 
-    ; --- Check local_read for POLLERR|POLLHUP ---
+    ; --- Check local_read for POLLERR, or POLLHUP without POLLIN ---
     movzx eax, word [rsp + STK_POLLFD1 + 6]
-    test ax, POLLERR | POLLHUP
+    test ax, POLLERR
     jnz .relay_exit
+    test ax, POLLHUP
+    jz .local_ok
+    test ax, POLLIN
+    jz .relay_exit              ; HUP with no data = done
+.local_ok:
 
     ; --- Check socket for POLLIN (data from remote) ---
     movzx eax, word [rsp + STK_POLLFDS + 6]

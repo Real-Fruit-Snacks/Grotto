@@ -31,7 +31,7 @@ net_listen:
     push    r12
     push    r13
     push    r14
-    sub     rsp, 96                 ; shadow + sockaddr_in + scratch
+    sub     rsp, 104                ; shadow + sockaddr_in + scratch (aligned)
 
     movzx   r12d, cx                ; save port
 
@@ -80,7 +80,7 @@ net_listen:
 
     mov     rax, r13                ; return accepted socket
 
-    add     rsp, 96
+    add     rsp, 104
     pop     r14
     pop     r13
     pop     r12
@@ -92,7 +92,7 @@ net_listen:
     call    [r15 + API_closesocket * 8]
 .listen_fail:
     mov     rax, -1
-    add     rsp, 96
+    add     rsp, 104
     pop     r14
     pop     r13
     pop     r12
@@ -166,7 +166,7 @@ send_all:
     push    r12
     push    r13
     push    r14
-    sub     rsp, 48                 ; shadow space
+    sub     rsp, 40                 ; shadow space (aligned)
 
     mov     rbx, rcx                ; socket
     mov     r12, rdx                ; buffer
@@ -192,7 +192,7 @@ send_all:
 
 .send_done:
     xor     eax, eax
-    add     rsp, 48
+    add     rsp, 40
     pop     r14
     pop     r13
     pop     r12
@@ -201,7 +201,7 @@ send_all:
 
 .send_fail:
     mov     rax, -1
-    add     rsp, 48
+    add     rsp, 40
     pop     r14
     pop     r13
     pop     r12
@@ -219,7 +219,7 @@ recv_exact:
     push    r12
     push    r13
     push    r14
-    sub     rsp, 48                 ; shadow space
+    sub     rsp, 40                 ; shadow space (aligned)
 
     mov     rbx, rcx                ; socket
     mov     r12, rdx                ; buffer
@@ -247,7 +247,7 @@ recv_exact:
 
 .recv_done:
     xor     eax, eax
-    add     rsp, 48
+    add     rsp, 40
     pop     r14
     pop     r13
     pop     r12
@@ -256,7 +256,7 @@ recv_exact:
 
 .recv_fail:
     mov     rax, -1
-    add     rsp, 48
+    add     rsp, 40
     pop     r14
     pop     r13
     pop     r12

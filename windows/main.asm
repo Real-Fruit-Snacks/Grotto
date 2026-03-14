@@ -1,4 +1,4 @@
-; ncat - encrypted netcat (Windows x86-64)
+; grotto - encrypted netcat (Windows x86-64)
 ; Entry point, CLI parsing, orchestration
 ; All Win32 APIs resolved via PEB walking (no imports)
 
@@ -163,6 +163,9 @@ find_token_end:
 ; Expects r15 = api_table pointer
 ; ============================================================================
 cleanup_and_exit:
+    ; Force stack alignment (entered via jmp, never returns)
+    and     rsp, -16
+
     ; Zero the key in memory
     lea     rdi, [rel g_key]
     xor     eax, eax
@@ -194,9 +197,8 @@ cleanup_and_exit:
 ; _start - Entry point
 ; ============================================================================
 _start:
-    ; Align stack to 16 bytes (Windows entry may not be aligned)
+    ; Align stack to 16 bytes (Windows entry jumps here, rsp is arbitrary)
     and     rsp, -16
-    sub     rsp, 8                  ; ensure alignment after call pushes return addr
 
     ; Save callee-saved registers
     push    rbx
@@ -476,7 +478,7 @@ _start:
 ; ============================================================================
 ; Data sections
 ; ============================================================================
-section .bss
+section .bss bss write align=8
     g_mode:          resb 1
     g_has_listen:    resb 1
     g_has_connect:   resb 1

@@ -1,4 +1,4 @@
-; ncat - encrypted netcat (Linux x86-64)
+; grotto - encrypted netcat (Linux x86-64)
 ; CLI argument parsing entry point
 
 default rel
@@ -391,7 +391,7 @@ section .bss
     g_shell_write_fd: resd 1     ; write fd to child stdin pipe
 
 section .rodata
-    usage_msg:   db "Usage: ncat [-l] [-c <host>] -p <port> -k <hex-key> [-e <cmd>]", 10, 0
+    usage_msg:   db "Usage: grotto [-l] [-c <host>] -p <port> -k <hex-key> [-e <cmd>]", 10, 0
     err_port:    db "Error: -p <port> is required", 10, 0
     err_key:     db "Error: -k <64-char-hex-key> is required", 10, 0
     err_conflict: db "Error: -l and -c cannot both be set", 10, 0

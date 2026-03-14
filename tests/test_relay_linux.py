@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Integration tests for Linux ncat encrypted relay and shell execution."""
+"""Integration tests for Linux grotto encrypted relay and shell execution."""
 
 import os
 import socket
@@ -10,9 +10,9 @@ import time
 
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 
-NCAT_BIN = os.path.join(os.path.dirname(__file__), "..", "build", "ncat")
+GROTTO_BIN = os.path.join(os.path.dirname(__file__), "..", "build", "grotto")
 # Resolve to absolute WSL path
-NCAT_WSL = "./build/ncat"
+GROTTO_WSL = "./build/grotto"
 
 
 def make_key():
@@ -75,18 +75,18 @@ def send_wire_msg(sock: socket.socket, key: bytes, plaintext: bytes):
 
 def test_echo_relay():
     """Test 1: Encrypted relay without -e (stdin/stdout mode).
-    Start ncat in listen mode, connect, send encrypted data, verify echo back."""
+    Start grotto in listen mode, connect, send encrypted data, verify echo back."""
     print("Test 1: Encrypted echo relay (no -e)...", end=" ", flush=True)
 
     key, key_hex = make_key()
     port = 14441
 
-    # Start ncat listener that cats back (using shell to pipe)
+    # Start grotto listener that cats back (using shell to pipe)
     # We'll just test that we can send and the other side receives
-    # For a true echo test, we'd need two ncat instances
+    # For a true echo test, we'd need two grotto instances
     # Instead, test with -e /bin/cat which echoes input back
     proc = subprocess.Popen(
-        ["wsl", NCAT_WSL, "-l", "-p", str(port), "-k", key_hex, "-e", "/bin/cat"],
+        ["wsl", GROTTO_WSL, "-l", "-p", str(port), "-k", key_hex, "-e", "/bin/cat"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
     )
@@ -125,7 +125,7 @@ def test_shell_exec():
     port = 14442
 
     proc = subprocess.Popen(
-        ["wsl", NCAT_WSL, "-l", "-p", str(port), "-k", key_hex, "-e", "/bin/sh"],
+        ["wsl", GROTTO_WSL, "-l", "-p", str(port), "-k", key_hex, "-e", "/bin/sh"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
     )
@@ -169,7 +169,7 @@ def test_multiple_commands():
     port = 14443
 
     proc = subprocess.Popen(
-        ["wsl", NCAT_WSL, "-l", "-p", str(port), "-k", key_hex, "-e", "/bin/sh"],
+        ["wsl", GROTTO_WSL, "-l", "-p", str(port), "-k", key_hex, "-e", "/bin/sh"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
     )

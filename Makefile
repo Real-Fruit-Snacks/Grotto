@@ -3,19 +3,19 @@ LD_WIN = x86_64-w64-mingw32-ld
 
 all: linux windows
 
-linux: build/ncat
+linux: build/grotto
 
-windows: build/ncat.exe
+windows: build/grotto.exe
 
-build/ncat: linux/main.asm
-	$(NASM) -f elf64 -I shared/ -I linux/ -o build/ncat.o linux/main.asm
-	wsl ld -o build/ncat build/ncat.o --strip-all
-	@echo "[*] Linux binary: $$(wc -c < build/ncat) bytes"
+build/grotto: linux/main.asm
+	$(NASM) -f elf64 -I shared/ -I linux/ -o build/grotto.o linux/main.asm
+	wsl ld -o build/grotto build/grotto.o --strip-all
+	@echo "[*] Linux binary: $$(wc -c < build/grotto) bytes"
 
-build/ncat.exe: windows/main.asm
-	$(NASM) -f win64 -I shared/ -I windows/ -o build/ncat.obj windows/main.asm
-	$(LD_WIN) -o build/ncat.exe build/ncat.obj --strip-all
-	@echo "[*] Windows binary: $$(wc -c < build/ncat.exe) bytes"
+build/grotto.exe: windows/main.asm
+	$(NASM) -f win64 -I shared/ -I windows/ -o build/grotto.obj windows/main.asm
+	$(LD_WIN) -e _start --stack 1048576,262144 -o build/grotto.exe build/grotto.obj --strip-all
+	@echo "[*] Windows binary: $$(wc -c < build/grotto.exe) bytes"
 
 clean:
 	rm -f build/*

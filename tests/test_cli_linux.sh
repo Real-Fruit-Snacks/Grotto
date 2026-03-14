@@ -2,7 +2,7 @@
 set -e
 PASS=0
 FAIL=0
-NCAT="wsl ./build/ncat"
+GROTTO="wsl ./build/grotto"
 
 run_test() {
     local desc="$1"
@@ -19,19 +19,19 @@ run_test() {
 }
 
 # Test: no arguments prints usage
-run_test "no args prints usage" "usage" $NCAT
+run_test "no args prints usage" "usage" $GROTTO
 
 # Test: missing -k
-run_test "missing -k prints error" "key" $NCAT -l -p 4444
+run_test "missing -k prints error" "key" $GROTTO -l -p 4444
 
 # Test: missing -p
-run_test "missing -p prints error" "port" $NCAT -l -k aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+run_test "missing -p prints error" "port" $GROTTO -l -k aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 
 # Test: -l and -c conflict
-run_test "conflict detected" "both\|conflict" $NCAT -l -c 127.0.0.1 -p 4444 -k aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+run_test "conflict detected" "both\|conflict" $GROTTO -l -c 127.0.0.1 -p 4444 -k aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 
 # Test: valid args exit cleanly (will exit 0 since no networking yet)
-$NCAT -l -p 4444 -k aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+$GROTTO -l -p 4444 -k aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 if [ $? -eq 0 ]; then
     echo "PASS: valid listen mode exits cleanly"
     PASS=$((PASS + 1))

@@ -29,25 +29,26 @@ spawn_shell:
 
     mov     r12, rcx                ; command string
 
-    ; Stack layout:
-    ;   [rsp+0]   SECURITY_ATTRIBUTES (24 bytes)
-    ;   [rsp+24]  stdin_read handle (8)
-    ;   [rsp+32]  stdin_write handle (8)
-    ;   [rsp+40]  stdout_read handle (8)
-    ;   [rsp+48]  stdout_write handle (8)
-    ;   [rsp+56]  STARTUPINFOA (104 bytes = 0x68)
-    ;   [rsp+160] PROCESS_INFORMATION (24 bytes)
-    ;   [rsp+184] shadow space + alignment (72 bytes)
-    ;   Total: 256 bytes
-    %define SH_SECATTR      0
-    %define SH_STDIN_RD     24
-    %define SH_STDIN_WR     32
-    %define SH_STDOUT_RD    40
-    %define SH_STDOUT_WR    48
-    %define SH_STARTUPINFO  56
-    %define SH_PROCINFO     160
-    %define SH_SHADOW       184
-    %define SH_TOTAL        256
+    ; Stack layout (shadow + stack args at bottom for correct API offsets):
+    ;   [rsp+0..31]   shadow space (32 bytes, used by all API calls)
+    ;   [rsp+32..79]  stack args for CreateProcessA (6 x 8 = 48 bytes)
+    ;   [rsp+80]      SECURITY_ATTRIBUTES (24 bytes)
+    ;   [rsp+104]     stdin_read handle (8)
+    ;   [rsp+112]     stdin_write handle (8)
+    ;   [rsp+120]     stdout_read handle (8)
+    ;   [rsp+128]     stdout_write handle (8)
+    ;   [rsp+136]     STARTUPINFOA (104 bytes)
+    ;   [rsp+240]     PROCESS_INFORMATION (24 bytes)
+    ;   [rsp+264..271] alignment padding
+    ;   Total: 272 bytes (7 pushes=56 + 272 = 328 ≡ 8 mod 16)
+    %define SH_SECATTR      80
+    %define SH_STDIN_RD     104
+    %define SH_STDIN_WR     112
+    %define SH_STDOUT_RD    120
+    %define SH_STDOUT_WR    128
+    %define SH_STARTUPINFO  136
+    %define SH_PROCINFO     240
+    %define SH_TOTAL        272
 
     sub     rsp, SH_TOTAL
 
@@ -117,19 +118,19 @@ spawn_shell:
     mov     [rsp + SH_STARTUPINFO + 96], rax        ; hStdError
 
     ; CreateProcessA(NULL, cmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)
-    ; 10 args: 4 in registers, 6 on stack
+    ; 10 args: 4 in registers, 6 on stack at [rsp+32..72]
     xor     ecx, ecx                ; lpApplicationName = NULL
     mov     rdx, r12                ; lpCommandLine
     xor     r8d, r8d                ; lpProcessAttributes = NULL
     xor     r9d, r9d                ; lpThreadAttributes = NULL
-    mov     dword [rsp + SH_SHADOW], 1       ; bInheritHandles = TRUE
-    mov     qword [rsp + SH_SHADOW + 8], 0  ; dwCreationFlags = 0
-    mov     qword [rsp + SH_SHADOW + 16], 0 ; lpEnvironment = NULL
-    mov     qword [rsp + SH_SHADOW + 24], 0 ; lpCurrentDirectory = NULL
+    mov     dword [rsp + 32], 1     ; bInheritHandles = TRUE
+    mov     qword [rsp + 40], 0     ; dwCreationFlags = 0
+    mov     qword [rsp + 48], 0     ; lpEnvironment = NULL
+    mov     qword [rsp + 56], 0     ; lpCurrentDirectory = NULL
     lea     rax, [rsp + SH_STARTUPINFO]
-    mov     [rsp + SH_SHADOW + 32], rax      ; lpStartupInfo
+    mov     [rsp + 64], rax         ; lpStartupInfo
     lea     rax, [rsp + SH_PROCINFO]
-    mov     [rsp + SH_SHADOW + 40], rax      ; lpProcessInformation
+    mov     [rsp + 72], rax         ; lpProcessInformation
     call    [r15 + API_CreateProcessA * 8]
     test    eax, eax
     jz      .spawn_close_all

@@ -1,3 +1,12 @@
 build/
 *.o
 *.obj
+.omc/
+docs/superpowers/
+tests/remote_*.py
+tests/stress_test.py
+tests/local_listen_test*.py
+tests/remote_batch.cmd
+tests/upload_and_test.ps1
+tests/portscan.ps1
+tests/gdb_test.py

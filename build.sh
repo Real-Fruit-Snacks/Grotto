@@ -9,5 +9,5 @@ make all
 
 echo ""
 echo "[*] Build complete."
-echo "[*] Usage (Linux):   ./build/ncat -l -p 4444 -k $KEY"
-echo "[*] Usage (Windows): build\\ncat.exe -c <ip> -p 4444 -k $KEY"
+echo "[*] Usage (Linux):   ./build/grotto -l -p 4444 -k $KEY"
+echo "[*] Usage (Windows): build\\grotto.exe -c <ip> -p 4444 -k $KEY"

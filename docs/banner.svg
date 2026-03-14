@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="290" viewBox="0 0 800 290">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#11111b"/>
+      <stop offset="50%" style="stop-color:#1e1e2e"/>
+      <stop offset="100%" style="stop-color:#181825"/>
+    </linearGradient>
+    <linearGradient id="title-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#94e2d5"/>
+      <stop offset="35%" style="stop-color:#74c7ec"/>
+      <stop offset="65%" style="stop-color:#89b4fa"/>
+      <stop offset="100%" style="stop-color:#cba6f7"/>
+    </linearGradient>
+    <linearGradient id="accent-line" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#94e2d5;stop-opacity:0"/>
+      <stop offset="20%" style="stop-color:#94e2d5"/>
+      <stop offset="50%" style="stop-color:#74c7ec"/>
+      <stop offset="80%" style="stop-color:#cba6f7"/>
+      <stop offset="100%" style="stop-color:#cba6f7;stop-opacity:0"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="290" rx="12" fill="url(#bg)"/>
+
+  <!-- Subtle border -->
+  <rect width="800" height="290" rx="12" fill="none" stroke="#45475a" stroke-width="1"/>
+
+  <!-- Decorative stalactites (top) -->
+  <g opacity="0.06">
+    <path d="M680,0 L685,35 L690,0" fill="#94e2d5"/>
+    <path d="M700,0 L703,20 L706,0" fill="#74c7ec"/>
+    <path d="M720,0 L724,45 L728,0" fill="#89b4fa"/>
+    <path d="M745,0 L747,15 L749,0" fill="#cba6f7"/>
+    <path d="M660,0 L663,25 L666,0" fill="#94e2d5"/>
+    <path d="M55,0 L58,30 L61,0" fill="#74c7ec"/>
+    <path d="M75,0 L78,18 L81,0" fill="#89b4fa"/>
+    <path d="M95,0 L99,42 L103,0" fill="#94e2d5"/>
+    <path d="M115,0 L117,12 L119,0" fill="#cba6f7"/>
+  </g>
+
+  <!-- Decorative water ripples (bottom) -->
+  <g opacity="0.05" transform="translate(50, 240)">
+    <ellipse cx="100" cy="0" rx="80" ry="3" fill="none" stroke="#94e2d5" stroke-width="1"/>
+    <ellipse cx="100" cy="8" rx="60" ry="2" fill="none" stroke="#74c7ec" stroke-width="1"/>
+    <ellipse cx="100" cy="14" rx="40" ry="2" fill="none" stroke="#89b4fa" stroke-width="1"/>
+  </g>
+
+  <!-- Secondary ripples (bottom-right) -->
+  <g opacity="0.04" transform="translate(550, 235)">
+    <ellipse cx="80" cy="0" rx="70" ry="3" fill="none" stroke="#74c7ec" stroke-width="1"/>
+    <ellipse cx="80" cy="8" rx="50" ry="2" fill="none" stroke="#94e2d5" stroke-width="1"/>
+  </g>
+
+  <!-- Decorative dots pattern -->
+  <g opacity="0.08">
+    <circle cx="60" cy="45" r="1.5" fill="#94e2d5"/>
+    <circle cx="80" cy="40" r="1" fill="#74c7ec"/>
+    <circle cx="100" cy="50" r="1.5" fill="#89b4fa"/>
+    <circle cx="75" cy="60" r="1" fill="#cba6f7"/>
+    <circle cx="95" cy="33" r="1" fill="#94e2d5"/>
+    <circle cx="115" cy="43" r="1.5" fill="#74c7ec"/>
+    <circle cx="40" cy="53" r="1" fill="#89b4fa"/>
+    <circle cx="120" cy="57" r="1" fill="#b4befe"/>
+    <circle cx="50" cy="35" r="1.5" fill="#94e2d5"/>
+    <circle cx="130" cy="37" r="1" fill="#74c7ec"/>
+    <circle cx="710" cy="215" r="1.5" fill="#89b4fa"/>
+    <circle cx="690" cy="225" r="1" fill="#94e2d5"/>
+    <circle cx="730" cy="230" r="1.5" fill="#74c7ec"/>
+    <circle cx="705" cy="240" r="1" fill="#cba6f7"/>
+    <circle cx="675" cy="220" r="1" fill="#89b4fa"/>
+    <circle cx="740" cy="220" r="1" fill="#94e2d5"/>
+  </g>
+
+  <!-- Title -->
+  <text x="400" y="130" font-family="'SF Mono','Fira Code','JetBrains Mono','Cascadia Code',Consolas,monospace"
+        font-size="72" font-weight="bold" fill="url(#title-grad)" text-anchor="middle"
+        letter-spacing="14" filter="url(#glow)">GROTTO</text>
+
+  <!-- Accent line under title -->
+  <rect x="200" y="148" width="400" height="2" rx="1" fill="url(#accent-line)"/>
+
+  <!-- Subtitle -->
+  <text x="400" y="180" font-family="'SF Mono','Fira Code','JetBrains Mono','Cascadia Code',Consolas,monospace"
+        font-size="13" fill="#a6adc8" text-anchor="middle"
+        letter-spacing="4">ENCRYPTED ASSEMBLY NETCAT</text>
+
+  <!-- Feature badges — row 1 -->
+  <g transform="translate(108, 205)">
+    <!-- chacha20-poly1305 -->
+    <rect x="0" y="0" width="165" height="28" rx="14" fill="#313244"/>
+    <rect x="0" y="0" width="165" height="28" rx="14" fill="none" stroke="#45475a" stroke-width="0.5"/>
+    <circle cx="18" cy="14" r="4" fill="#a6e3a1"/>
+    <text x="30" y="18" font-family="'SF Mono','Fira Code','JetBrains Mono',Consolas,monospace"
+          font-size="11" fill="#cdd6f4">chacha20-poly1305</text>
+
+    <!-- cross-platform -->
+    <rect x="180" y="0" width="140" height="28" rx="14" fill="#313244"/>
+    <rect x="180" y="0" width="140" height="28" rx="14" fill="none" stroke="#45475a" stroke-width="0.5"/>
+    <circle cx="198" cy="14" r="4" fill="#89b4fa"/>
+    <text x="210" y="18" font-family="'SF Mono','Fira Code','JetBrains Mono',Consolas,monospace"
+          font-size="11" fill="#cdd6f4">cross-platform</text>
+
+    <!-- ~8 KB -->
+    <rect x="335" y="0" width="90" height="28" rx="14" fill="#313244"/>
+    <rect x="335" y="0" width="90" height="28" rx="14" fill="none" stroke="#45475a" stroke-width="0.5"/>
+    <circle cx="353" cy="14" r="4" fill="#f38ba8"/>
+    <text x="365" y="18" font-family="'SF Mono','Fira Code','JetBrains Mono',Consolas,monospace"
+          font-size="11" fill="#cdd6f4">~8 KB</text>
+
+    <!-- peb walking -->
+    <rect x="440" y="0" width="130" height="28" rx="14" fill="#313244"/>
+    <rect x="440" y="0" width="130" height="28" rx="14" fill="none" stroke="#45475a" stroke-width="0.5"/>
+    <circle cx="458" cy="14" r="4" fill="#fab387"/>
+    <text x="470" y="18" font-family="'SF Mono','Fira Code','JetBrains Mono',Consolas,monospace"
+          font-size="11" fill="#cdd6f4">peb walking</text>
+  </g>
+
+  <!-- Feature badges — row 2 -->
+  <g transform="translate(168, 240)">
+    <!-- x86_64 -->
+    <rect x="0" y="0" width="100" height="28" rx="14" fill="#313244"/>
+    <rect x="0" y="0" width="100" height="28" rx="14" fill="none" stroke="#45475a" stroke-width="0.5"/>
+    <circle cx="18" cy="14" r="4" fill="#74c7ec"/>
+    <text x="30" y="18" font-family="'SF Mono','Fira Code','JetBrains Mono',Consolas,monospace"
+          font-size="11" fill="#cdd6f4">x86_64</text>
+
+    <!-- shell relay -->
+    <rect x="115" y="0" width="130" height="28" rx="14" fill="#313244"/>
+    <rect x="115" y="0" width="130" height="28" rx="14" fill="none" stroke="#45475a" stroke-width="0.5"/>
+    <circle cx="133" cy="14" r="4" fill="#cba6f7"/>
+    <text x="145" y="18" font-family="'SF Mono','Fira Code','JetBrains Mono',Consolas,monospace"
+          font-size="11" fill="#cdd6f4">shell relay</text>
+
+    <!-- no deps -->
+    <rect x="260" y="0" width="100" height="28" rx="14" fill="#313244"/>
+    <rect x="260" y="0" width="100" height="28" rx="14" fill="none" stroke="#45475a" stroke-width="0.5"/>
+    <circle cx="278" cy="14" r="4" fill="#94e2d5"/>
+    <text x="290" y="18" font-family="'SF Mono','Fira Code','JetBrains Mono',Consolas,monospace"
+          font-size="11" fill="#cdd6f4">no deps</text>
+  </g>
+</svg>

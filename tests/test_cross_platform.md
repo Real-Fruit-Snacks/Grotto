@@ -1,11 +1,11 @@
 # Cross-Platform Test Procedures
 
-Manual test procedures for verifying encrypted ncat communication between Linux and Windows hosts.
+Manual test procedures for verifying encrypted grotto communication between Linux and Windows hosts.
 
 ## Setup Requirements
 
-- **Linux host**: `build/ncat` binary (x86-64 ELF, statically linked)
-- **Windows host**: `build/ncat.exe` binary (x86-64 PE, no DLL dependencies)
+- **Linux host**: `build/grotto` binary (x86-64 ELF, statically linked)
+- **Windows host**: `build/grotto.exe` binary (x86-64 PE, no DLL dependencies)
 - **Network**: Both hosts must be able to reach each other on TCP (adjust firewall rules)
 - **Python 3.8+** with `cryptography` package (for Wireshark key verification)
 - **Wireshark** (optional, for Test 5)
@@ -22,16 +22,16 @@ Save the output as `$KEY` for all tests below.
 
 ## Test 1: Linux Listener + Windows Connector
 
-Verifies that a Windows ncat.exe client can connect to a Linux ncat listener.
+Verifies that a Windows grotto.exe client can connect to a Linux grotto listener.
 
 **On Linux:**
 ```bash
-./build/ncat -l -p 4444 -k $KEY -e /bin/cat
+./build/grotto -l -p 4444 -k $KEY -e /bin/cat
 ```
 
 **On Windows:**
 ```
-build\ncat.exe 192.168.x.x 4444 -k %KEY% -e "cmd.exe /c findstr .*"
+build\grotto.exe 192.168.x.x 4444 -k %KEY% -e "cmd.exe /c findstr .*"
 ```
 
 **Verification (from a third terminal, using Python):**
@@ -64,16 +64,16 @@ print(pt)  # Should print b'hello\n'
 
 ## Test 2: Windows Listener + Linux Connector
 
-Verifies that a Linux ncat client can connect to a Windows ncat.exe listener.
+Verifies that a Linux grotto client can connect to a Windows grotto.exe listener.
 
 **On Windows:**
 ```
-build\ncat.exe -l -p 4445 -k %KEY% -e "cmd.exe /c findstr .*"
+build\grotto.exe -l -p 4445 -k %KEY% -e "cmd.exe /c findstr .*"
 ```
 
 **On Linux:**
 ```bash
-./build/ncat 192.168.x.x 4445 -k $KEY -e /bin/cat
+./build/grotto 192.168.x.x 4445 -k $KEY -e /bin/cat
 ```
 
 **Verification**: Same as Test 1, connecting to the Windows IP on port 4445.
@@ -88,12 +88,12 @@ A Linux machine connects back to a Windows listener, providing a Linux shell.
 
 **On Windows (listener):**
 ```
-build\ncat.exe -l -p 4446 -k %KEY%
+build\grotto.exe -l -p 4446 -k %KEY%
 ```
 
 **On Linux (connect-back with shell):**
 ```bash
-./build/ncat 192.168.x.x 4446 -k $KEY -e /bin/sh
+./build/grotto 192.168.x.x 4446 -k $KEY -e /bin/sh
 ```
 
 **Verification**: From the Windows side, type commands. Each command is encrypted, sent to Linux, executed by `/bin/sh`, and the output returned encrypted.
@@ -115,12 +115,12 @@ A Windows machine connects back to a Linux listener, providing a Windows shell.
 
 **On Linux (listener):**
 ```bash
-./build/ncat -l -p 4447 -k $KEY
+./build/grotto -l -p 4447 -k $KEY
 ```
 
 **On Windows (connect-back with shell):**
 ```
-build\ncat.exe 192.168.x.x 4447 -k %KEY% -e cmd.exe
+build\grotto.exe 192.168.x.x 4447 -k %KEY% -e cmd.exe
 ```
 
 **Verification**: From the Linux side, type commands. Each command is encrypted, sent to Windows, executed by `cmd.exe`, and the output returned encrypted.

